@@ -5,9 +5,8 @@ from util import PointAffine, PointProjective
 import itertools
 
 def get_random_point() -> PointProjective:
-  # a = randint(1, curve_order-1)
-  # return multiply(G1, a)
-  return G1
+  a = randint(1, curve_order-1)
+  return multiply(G1, a)
 
 class CurdleproofsCrs:
   def __init__(self, ell: int) -> None:
