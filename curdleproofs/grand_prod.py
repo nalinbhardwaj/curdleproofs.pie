@@ -276,4 +276,4 @@ def test_gprod():
   print("Wrong MSM verify: ", msm_verify)
   print("Wrong Error: ", err)
 
-test_gprod()
+# test_gprod()
