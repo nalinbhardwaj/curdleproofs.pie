@@ -29,6 +29,6 @@ class CurdleproofsTranscript:
   def get_and_append_challenges(self, label: bytes, n: int) -> List[Fr]:
     return [self.get_and_append_challenge(label) for i in range(0, n)]
 
-transcript = CurdleproofsTranscript()
-transcript.append(b'hello', b'world')
+# transcript = CurdleproofsTranscript()
+# transcript.append(b'hello', b'world')
 # print(transcript.get_and_append_challenge(b'challenge'))

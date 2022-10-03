@@ -40,13 +40,13 @@ class SameMSMProof:
   
   @classmethod
   def new(cls,
-    crs_G_vec: List[PointAffine],
+    crs_G_vec: List[PointProjective],
 
     A: PointProjective,
     Z_t: PointProjective,
     Z_u: PointProjective,
-    vec_T: List[PointAffine],
-    vec_U: List[PointAffine],
+    vec_T: List[PointProjective],
+    vec_U: List[PointProjective],
 
     vec_x: List[Fr],
 
@@ -65,12 +65,12 @@ class SameMSMProof:
 
     vec_r = generate_blinders(n)
 
-    B_a = SingleMSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_r))).compute()
-    B_t = SingleMSM(list(map(affine_to_projective, vec_T)), list(map(int, vec_r))).compute()
-    B_u = SingleMSM(list(map(affine_to_projective, vec_U)), list(map(int, vec_r))).compute()
+    B_a = SingleMSM(crs_G_vec, list(map(int, vec_r))).compute()
+    B_t = SingleMSM(vec_T, list(map(int, vec_r))).compute()
+    B_u = SingleMSM(vec_U, list(map(int, vec_r))).compute()
 
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes([A, Z_t, Z_u]))
-    transcript.append_list(b'same_msm_step1', points_affine_to_bytes(vec_T + vec_U))
+    transcript.append_list(b'same_msm_step1', points_projective_to_bytes(vec_T + vec_U))
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes([B_a, B_t, B_u]))
     alpha = transcript.get_and_append_challenge(b'same_msm_alpha')
 
@@ -85,12 +85,12 @@ class SameMSMProof:
       U_L, U_R = vec_U[:n], vec_U[n:]
       G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
 
-      L_A = SingleMSM(list(map(affine_to_projective, G_R)), list(map(int, x_L))).compute()
-      L_T = SingleMSM(list(map(affine_to_projective, T_R)), list(map(int, x_L))).compute()
-      L_U = SingleMSM(list(map(affine_to_projective, U_R)), list(map(int, x_L))).compute()
-      R_A = SingleMSM(list(map(affine_to_projective, G_L)), list(map(int, x_R))).compute()
-      R_T = SingleMSM(list(map(affine_to_projective, T_L)), list(map(int, x_R))).compute()
-      R_U = SingleMSM(list(map(affine_to_projective, U_L)), list(map(int, x_R))).compute()
+      L_A = SingleMSM(G_R, list(map(int, x_L))).compute()
+      L_T = SingleMSM(T_R, list(map(int, x_L))).compute()
+      L_U = SingleMSM(U_R, list(map(int, x_L))).compute()
+      R_A = SingleMSM(G_L, list(map(int, x_R))).compute()
+      R_T = SingleMSM(T_L, list(map(int, x_R))).compute()
+      R_U = SingleMSM(U_L, list(map(int, x_R))).compute()
 
       vec_L_A.append(L_A)
       vec_L_T.append(L_T)
@@ -105,9 +105,9 @@ class SameMSMProof:
 
       for i in range(0, n):
         x_L[i] += gamma_inv * x_R[i]
-        T_L[i] = normalize(add(affine_to_projective(T_L[i]), multiply(affine_to_projective(T_R[i]), int(gamma))))
-        U_L[i] = normalize(add(affine_to_projective(U_L[i]), multiply(affine_to_projective(U_R[i]), int(gamma))))
-        G_L[i] = normalize(add(affine_to_projective(G_L[i]), multiply(affine_to_projective(G_R[i]), int(gamma))))
+        T_L[i] = add(T_L[i], multiply(T_R[i], int(gamma)))
+        U_L[i] = add(U_L[i], multiply(U_R[i], int(gamma)))
+        G_L[i] = add(G_L[i], multiply(G_R[i], int(gamma)))
       
       vec_x = x_L
       vec_T = T_L
@@ -157,15 +157,15 @@ class SameMSMProof:
     A: PointProjective,
     Z_t: PointProjective,
     Z_u: PointProjective,
-    vec_T: List[PointAffine],
-    vec_U: List[PointAffine],
+    vec_T: List[PointProjective],
+    vec_U: List[PointProjective],
     transcript: CurdleproofsTranscript,
     msm_accumulator: MSMAccumulatorInefficient
   ) -> Tuple[bool, str]:
     n = len(vec_T)
 
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes([A, Z_t, Z_u]))
-    transcript.append_list(b'same_msm_step1', points_affine_to_bytes(vec_T + vec_U))
+    transcript.append_list(b'same_msm_step1', points_projective_to_bytes(vec_T + vec_U))
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes([self.B_a, self.B_t, self.B_u]))
     alpha = transcript.get_and_append_challenge(b'same_msm_alpha')
 
@@ -184,10 +184,10 @@ class SameMSMProof:
     msm_accumulator.accumulate_check(point_lhs, crs_G_vec, list(map(int, vec_x_times_s)))
 
     point_lhs = add(add(SingleMSM(self.vec_L_T, list(map(int, vec_gamma))).compute(), Z_t_a), SingleMSM(self.vec_R_T, list(map(int, vec_gamma_inv))).compute())
-    msm_accumulator.accumulate_check(point_lhs, list(map(affine_to_projective, vec_T)), list(map(int, vec_x_times_s)))
+    msm_accumulator.accumulate_check(point_lhs, vec_T, list(map(int, vec_x_times_s)))
 
     point_lhs = add(add(SingleMSM(self.vec_L_U, list(map(int, vec_gamma))).compute(), Z_u_a), SingleMSM(self.vec_R_U, list(map(int, vec_gamma_inv))).compute())
-    msm_accumulator.accumulate_check(point_lhs, list(map(affine_to_projective, vec_U)), list(map(int, vec_x_times_s)))
+    msm_accumulator.accumulate_check(point_lhs, vec_U, list(map(int, vec_x_times_s)))
 
     return True, ''
 
@@ -237,4 +237,4 @@ def test_same_msm():
   print("MSM verify", msm_verify)
   print("Error", err)
 
-test_same_msm()
+# test_same_msm()

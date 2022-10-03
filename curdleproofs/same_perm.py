@@ -15,7 +15,9 @@ from operator import mul as op_mul
 
 T_SAME_PERM_PROOF = TypeVar('T_SAME_PERM_PROOF', bound="SamePermutationProof")
 
-def get_permutation(vec_a: List[Fr], permutation: List[Fr]) -> List[Fr]:
+T_GET_PERMUTATION = TypeVar('T_GET_PERMUTATION')
+
+def get_permutation(vec_a: List[T_GET_PERMUTATION], permutation: List[Fr]) -> List[T_GET_PERMUTATION]:
   return [vec_a[i] for i in permutation]
 
 class SamePermutationProof:

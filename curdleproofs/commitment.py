@@ -20,13 +20,17 @@ class GroupCommitment:
     crs_H: PointProjective,
     T: PointProjective,
     r: Fr
-  ) -> None:
+  ) -> T_GroupCommitment:
     return cls(multiply(crs_G, int(r)), add(T, multiply(crs_H, int(r))))
 
-  def __add__(self, other: T_GroupCommitment) -> T_GroupCommitment:
+  def __add__(self, other: object) -> T_GroupCommitment:
+    if not isinstance(other, GroupCommitment):
+      return NotImplemented
     return type(self)(add(self.T_1, other.T_1), add(self.T_2, other.T_2))
   
-  def __mul__(self, other: Fr) -> T_GroupCommitment:
+  def __mul__(self, other: object) -> T_GroupCommitment:
+    if not isinstance(other, Fr):
+      return NotImplemented
     return type(self)(multiply(self.T_1, int(other)), multiply(self.T_2, int(other)))
 
   def __eq__(self, __o: object) -> bool:

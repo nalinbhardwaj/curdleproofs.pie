@@ -123,4 +123,4 @@ def test_same_scalar_arg():
   print("res", res)
   print("err", err)
 
-test_same_scalar_arg()
+# test_same_scalar_arg()
