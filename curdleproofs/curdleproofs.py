@@ -2,12 +2,11 @@ from math import log2
 import random
 from crs import CurdleproofsCrs, get_random_point
 from ipa import generate_blinders
-from msm_accumulator import SingleMSM
 from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, invert
-from msm_accumulator import MSMAccumulatorInefficient
+from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg, Z1, is_inf, FQ
 from same_perm import SamePermutationProof, get_permutation
 from same_msm import SameMSMProof
@@ -63,7 +62,7 @@ class CurdleProofsProof:
     vec_r_a_prime = vec_a_blinders + [Fr.zero(), Fr.zero()]
     vec_a_permuted = get_permutation(vec_a, permutation)
 
-    A = add(SingleMSM(list(map(affine_to_projective, crs.vec_G)), list(map(int, vec_a_permuted))).compute(), SingleMSM(list(map(affine_to_projective, crs.vec_H)), list(map(int, vec_r_a_prime))).compute())
+    A = add(compute_MSM(list(map(affine_to_projective, crs.vec_G)), list(map(int, vec_a_permuted))), compute_MSM(list(map(affine_to_projective, crs.vec_H)), list(map(int, vec_r_a_prime))))
 
     (same_perm_proof, err) = SamePermutationProof.new(
       crs_G_vec=list(map(affine_to_projective, crs.vec_G)),
@@ -83,8 +82,8 @@ class CurdleProofsProof:
 
     r_t = Fr(random.randint(1, Fr.field_modulus))
     r_u = Fr(random.randint(1, Fr.field_modulus))
-    R = SingleMSM(list(map(affine_to_projective, vec_R)), list(map(int, vec_a))).compute()
-    S = SingleMSM(list(map(affine_to_projective, vec_S)), list(map(int, vec_a))).compute()
+    R = compute_MSM(list(map(affine_to_projective, vec_R)), list(map(int, vec_a)))
+    S = compute_MSM(list(map(affine_to_projective, vec_S)), list(map(int, vec_a)))
 
     cm_T: GroupCommitment = GroupCommitment.new(crs.G_t, crs.H, multiply(R, int(k)), r_t)
     cm_U: GroupCommitment = GroupCommitment.new(crs.G_u, crs.H, multiply(S, int(k)), r_u)
@@ -147,7 +146,7 @@ class CurdleProofsProof:
     ell = len(vec_R)
 
     transcript = CurdleproofsTranscript()
-    msm_accumulator = MSMAccumulatorInefficient()
+    msm_accumulator = MSMAccumulator()
 
     if is_inf(vec_T[0]):
       return False, 'vec_T[0] is infinity'
@@ -228,7 +227,7 @@ def shuffle_permute_and_commit_input(
   sigma_ell = get_permutation(range_as_fr, permutation)
 
   vec_m_blinders = generate_blinders(N_BLINDERS)
-  M = add(SingleMSM(list(map(affine_to_projective, crs.vec_G)), list(map(int, sigma_ell))).compute(), SingleMSM(list(map(affine_to_projective, crs.vec_H)), list(map(int, vec_m_blinders))).compute())
+  M = add(compute_MSM(list(map(affine_to_projective, crs.vec_G)), list(map(int, sigma_ell))), compute_MSM(list(map(affine_to_projective, crs.vec_H)), list(map(int, vec_m_blinders))))
 
   return vec_T, vec_U, M, vec_m_blinders
 
@@ -261,6 +260,8 @@ def test_shuffle_argument():
 
   print("shuffle proof", shuffle_proof)
 
+  # for i in range(50):
+  #   print("iter ", i)
   verify, err = shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
   print("verify", verify)
   print("err", err)

@@ -7,7 +7,7 @@ from util import points_projective_to_bytes
 from transcript import CurdleproofsTranscript
 from typing import List, Tuple, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes
-from msm_accumulator import MSMAccumulatorInefficient
+from msm_accumulator import MSMAccumulator
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg
 from operator import mul as op_mul
 

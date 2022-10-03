@@ -2,12 +2,11 @@ from math import log2
 import random
 from crs import CurdleproofsCrs, get_random_point
 from ipa import generate_blinders, get_verification_scalars_bitstring
-from msm_accumulator import SingleMSM
 from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, invert
-from msm_accumulator import MSMAccumulatorInefficient
+from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg
 
 T_SameMSMProof = TypeVar('T_SameMSMProof', bound="SameMSMProof")
@@ -65,9 +64,9 @@ class SameMSMProof:
 
     vec_r = generate_blinders(n)
 
-    B_a = SingleMSM(crs_G_vec, list(map(int, vec_r))).compute()
-    B_t = SingleMSM(vec_T, list(map(int, vec_r))).compute()
-    B_u = SingleMSM(vec_U, list(map(int, vec_r))).compute()
+    B_a = compute_MSM(crs_G_vec, list(map(int, vec_r)))
+    B_t = compute_MSM(vec_T, list(map(int, vec_r)))
+    B_u = compute_MSM(vec_U, list(map(int, vec_r)))
 
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes([A, Z_t, Z_u]))
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes(vec_T + vec_U))
@@ -85,12 +84,12 @@ class SameMSMProof:
       U_L, U_R = vec_U[:n], vec_U[n:]
       G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
 
-      L_A = SingleMSM(G_R, list(map(int, x_L))).compute()
-      L_T = SingleMSM(T_R, list(map(int, x_L))).compute()
-      L_U = SingleMSM(U_R, list(map(int, x_L))).compute()
-      R_A = SingleMSM(G_L, list(map(int, x_R))).compute()
-      R_T = SingleMSM(T_L, list(map(int, x_R))).compute()
-      R_U = SingleMSM(U_L, list(map(int, x_R))).compute()
+      L_A = compute_MSM(G_R, list(map(int, x_L)))
+      L_T = compute_MSM(T_R, list(map(int, x_L)))
+      L_U = compute_MSM(U_R, list(map(int, x_L)))
+      R_A = compute_MSM(G_L, list(map(int, x_R)))
+      R_T = compute_MSM(T_L, list(map(int, x_R)))
+      R_U = compute_MSM(U_L, list(map(int, x_R)))
 
       vec_L_A.append(L_A)
       vec_L_T.append(L_T)
@@ -160,7 +159,7 @@ class SameMSMProof:
     vec_T: List[PointProjective],
     vec_U: List[PointProjective],
     transcript: CurdleproofsTranscript,
-    msm_accumulator: MSMAccumulatorInefficient
+    msm_accumulator: MSMAccumulator
   ) -> Tuple[bool, str]:
     n = len(vec_T)
 
@@ -180,13 +179,13 @@ class SameMSMProof:
     Z_t_a = add(self.B_t, multiply(Z_t, int(alpha)))
     Z_u_a = add(self.B_u, multiply(Z_u, int(alpha)))
 
-    point_lhs = add(add(SingleMSM(self.vec_L_A, list(map(int, vec_gamma))).compute(), A_a), SingleMSM(self.vec_R_A, list(map(int, vec_gamma_inv))).compute())
+    point_lhs = add(add(compute_MSM(self.vec_L_A, list(map(int, vec_gamma))), A_a), compute_MSM(self.vec_R_A, list(map(int, vec_gamma_inv))))
     msm_accumulator.accumulate_check(point_lhs, crs_G_vec, list(map(int, vec_x_times_s)))
 
-    point_lhs = add(add(SingleMSM(self.vec_L_T, list(map(int, vec_gamma))).compute(), Z_t_a), SingleMSM(self.vec_R_T, list(map(int, vec_gamma_inv))).compute())
+    point_lhs = add(add(compute_MSM(self.vec_L_T, list(map(int, vec_gamma))), Z_t_a), compute_MSM(self.vec_R_T, list(map(int, vec_gamma_inv))))
     msm_accumulator.accumulate_check(point_lhs, vec_T, list(map(int, vec_x_times_s)))
 
-    point_lhs = add(add(SingleMSM(self.vec_L_U, list(map(int, vec_gamma))).compute(), Z_u_a), SingleMSM(self.vec_R_U, list(map(int, vec_gamma_inv))).compute())
+    point_lhs = add(add(compute_MSM(self.vec_L_U, list(map(int, vec_gamma))), Z_u_a), compute_MSM(self.vec_R_U, list(map(int, vec_gamma_inv))))
     msm_accumulator.accumulate_check(point_lhs, vec_U, list(map(int, vec_x_times_s)))
 
     return True, ''
@@ -201,9 +200,9 @@ def test_same_msm():
   vec_U = [normalize(get_random_point()) for _ in range(0, n)]
   vec_x = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(0, n)]
 
-  A = SingleMSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_x))).compute()
-  Z_t = SingleMSM(list(map(affine_to_projective, vec_T)), list(map(int, vec_x))).compute()
-  Z_u = SingleMSM(list(map(affine_to_projective, vec_U)), list(map(int, vec_x))).compute()
+  A = compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_x)))
+  Z_t = compute_MSM(list(map(affine_to_projective, vec_T)), list(map(int, vec_x)))
+  Z_u = compute_MSM(list(map(affine_to_projective, vec_U)), list(map(int, vec_x)))
 
   proof: SameMSMProof = SameMSMProof.new(
     crs_G_vec=crs_G_vec,
@@ -219,7 +218,7 @@ def test_same_msm():
   print("Proof", proof)
 
   transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulatorInefficient()
+  msm_accumulator = MSMAccumulator()
 
   (result, err) = proof.verify(
     crs_G_vec=list(map(affine_to_projective, crs_G_vec)),

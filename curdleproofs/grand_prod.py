@@ -7,7 +7,7 @@ from util import invert, point_projective_to_bytes
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, affine_to_projective
-from msm_accumulator import MSMAccumulatorInefficient, SingleMSM
+from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg, eq, Z1
 
 T_GrandProductProof = TypeVar('T_GrandProductProof', bound="GrandProductProof")  
@@ -44,7 +44,7 @@ class GrandProductProof:
       vec_c.append(vec_c[i] * vec_b[i])
     
     vec_c_blinders = generate_blinders(n_blinders)
-    C = add(SingleMSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_c))).compute(), SingleMSM(list(map(affine_to_projective, crs_H_vec)), list(map(int, vec_c_blinders))).compute())
+    C = add(compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_c))), compute_MSM(list(map(affine_to_projective, crs_H_vec)), list(map(int, vec_c_blinders))))
 
     vec_r_b_plus_alpha = [r_b_i + alpha for r_b_i in vec_b_blinders]
     r_p = inner_product(vec_r_b_plus_alpha, vec_c_blinders)
@@ -80,7 +80,7 @@ class GrandProductProof:
     vec_d_blinders = [(beta ** (ell + 1)) * r_b_i for r_b_i in vec_r_b_plus_alpha]
 
     vec_alphabeta = [alpha * (beta ** (ell + 1)) for _ in range(n_blinders)]
-    D = add(add(B, neg(SingleMSM(list(map(affine_to_projective, vec_G_prime)), list(map(int, vec_beta_powers))).compute())), SingleMSM(list(map(affine_to_projective, vec_H_prime)), list(map(int, vec_alphabeta))).compute())
+    D = add(add(B, neg(compute_MSM(list(map(affine_to_projective, vec_G_prime)), list(map(int, vec_beta_powers))))), compute_MSM(list(map(affine_to_projective, vec_H_prime)), list(map(int, vec_alphabeta))))
 
     vec_G = crs_G_vec + crs_H_vec
     vec_G_prime += vec_H_prime
@@ -94,8 +94,8 @@ class GrandProductProof:
     # print("computed", inner_product(vec_c, vec_d))
 
     assert inner_product(vec_c, vec_d) == inner_prod
-    assert eq(SingleMSM(list(map(affine_to_projective, vec_G)), list(map(int, vec_c))).compute(), C)
-    assert eq(SingleMSM(list(map(affine_to_projective, vec_G_prime)), list(map(int, vec_d))).compute(), D)
+    assert eq(compute_MSM(list(map(affine_to_projective, vec_G)), list(map(int, vec_c))), C)
+    assert eq(compute_MSM(list(map(affine_to_projective, vec_G_prime)), list(map(int, vec_d))), D)
 
     (ipa_proof, err) = IPA.new(
       crs_G_vec=vec_G,
@@ -126,7 +126,7 @@ class GrandProductProof:
 
     n_blinders: int,
     transcript: CurdleproofsTranscript,
-    msm_accumulator: MSMAccumulatorInefficient
+    msm_accumulator: MSMAccumulator
   ) -> Tuple[bool, str]:
     ell = len(crs_G_vec)
     
@@ -194,7 +194,7 @@ def test_gprod():
 
   gprod_result = reduce(operator.mul, vec_b, Fr.one())
 
-  B = add(SingleMSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_b))).compute(), SingleMSM(list(map(affine_to_projective, crs_H_vec)), list(map(int, vec_b_blinders))).compute())
+  B = add(compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_b))), compute_MSM(list(map(affine_to_projective, crs_H_vec)), list(map(int, vec_b_blinders))))
 
   (gprod_proof, err) = GrandProductProof.new(
     crs_G_vec=crs_G_vec,
@@ -211,7 +211,7 @@ def test_gprod():
   print("Prover error:", err)
 
   transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulatorInefficient()
+  msm_accumulator = MSMAccumulator()
 
   (result, err) = gprod_proof.verify(
     crs_G_vec=crs_G_vec,
@@ -234,7 +234,7 @@ def test_gprod():
 
   # Wrong test
   transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulatorInefficient()
+  msm_accumulator = MSMAccumulator()
   (result, err) = gprod_proof.verify(
     crs_G_vec=crs_G_vec,
     crs_H_vec=crs_H_vec,
@@ -256,7 +256,7 @@ def test_gprod():
 
   # Wrong test
   transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulatorInefficient()
+  msm_accumulator = MSMAccumulator()
   (result, err) = gprod_proof.verify(
     crs_G_vec=crs_G_vec,
     crs_H_vec=crs_H_vec,

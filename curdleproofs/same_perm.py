@@ -9,7 +9,7 @@ from ipa import generate_blinders
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, points_projective_to_bytes
-from msm_accumulator import MSMAccumulatorInefficient, SingleMSM
+from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg, Z1
 from operator import mul as op_mul
 
@@ -57,7 +57,7 @@ class SamePermutationProof:
     gprod_result = reduce(op_mul, permuted_polynomial_factors, Fr.one())
 
     vec_beta_repeated = [beta] * ell
-    B = add(add(A, multiply(M, int(alpha))), SingleMSM(crs_G_vec, list(map(int, vec_beta_repeated))).compute())
+    B = add(add(A, multiply(M, int(alpha))), compute_MSM(crs_G_vec, list(map(int, vec_beta_repeated))))
 
     vec_b_blinders = [vec_a_blinders[i] + alpha * vec_m_blinders[i] for i in range(0, n_blinders)]
 
@@ -90,7 +90,7 @@ class SamePermutationProof:
 
     n_blinders: int,
     transcript: CurdleproofsTranscript,
-    msm_accumulator: MSMAccumulatorInefficient
+    msm_accumulator: MSMAccumulator
   ) -> Tuple[bool, str]:
     ell = len(crs_G_vec)
 
@@ -152,8 +152,8 @@ def test_same_permutation_proof():
   vec_a = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(0, ell)]
   vec_a_permuted = get_permutation(vec_a, permutation)
 
-  A = add(SingleMSM(crs_G_vec, list(map(int, vec_a_permuted))).compute(), SingleMSM(crs_H_vec, list(map(int, vec_a_blinders))).compute())
-  M = add(SingleMSM(crs_G_vec, list(map(int, permutation))).compute(), SingleMSM(crs_H_vec, list(map(int, vec_m_blinders))).compute())
+  A = add(compute_MSM(crs_G_vec, list(map(int, vec_a_permuted))), compute_MSM(crs_H_vec, list(map(int, vec_a_blinders))))
+  M = add(compute_MSM(crs_G_vec, list(map(int, permutation))), compute_MSM(crs_H_vec, list(map(int, vec_m_blinders))))
 
   (same_perm_proof, err) = SamePermutationProof.new(
     crs_G_vec=crs_G_vec,
@@ -172,7 +172,7 @@ def test_same_permutation_proof():
   print("Error: ", err)
 
   transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulatorInefficient()
+  msm_accumulator = MSMAccumulator()
 
   (verify, err) = same_perm_proof.verify(
     crs_G_vec=crs_G_vec,
