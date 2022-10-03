@@ -1,14 +1,14 @@
 from math import log2
 import random
-from crs import CurdleproofsCrs, get_random_point
+from crs import CurdleproofsCrs
 from ipa import generate_blinders
-from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes
+from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes, get_random_point
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from util import PointAffine, PointProjective, Fr, field_to_bytes, invert
+from util import PointAffine, PointProjective, Fr, field_to_bytes, invert, get_permutation
 from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg, Z1, is_inf, FQ
-from same_perm import SamePermutationProof, get_permutation
+from same_perm import SamePermutationProof
 from same_msm import SameMSMProof
 from same_scalar import SameScalarProof
 from commitment import GroupCommitment
@@ -62,11 +62,11 @@ class CurdleProofsProof:
     vec_r_a_prime = vec_a_blinders + [Fr.zero(), Fr.zero()]
     vec_a_permuted = get_permutation(vec_a, permutation)
 
-    A = add(compute_MSM(list(map(affine_to_projective, crs.vec_G)), list(map(int, vec_a_permuted))), compute_MSM(list(map(affine_to_projective, crs.vec_H)), list(map(int, vec_r_a_prime))))
+    A = add(compute_MSM(crs.vec_G, vec_a_permuted), compute_MSM(crs.vec_H, vec_r_a_prime))
 
     (same_perm_proof, err) = SamePermutationProof.new(
-      crs_G_vec=list(map(affine_to_projective, crs.vec_G)),
-      crs_H_vec=list(map(affine_to_projective, crs.vec_H)),
+      crs_G_vec=crs.vec_G,
+      crs_H_vec=crs.vec_H,
       crs_U=crs.H,
       A=A,
       M=M,
@@ -82,8 +82,8 @@ class CurdleProofsProof:
 
     r_t = Fr(random.randint(1, Fr.field_modulus))
     r_u = Fr(random.randint(1, Fr.field_modulus))
-    R = compute_MSM(list(map(affine_to_projective, vec_R)), list(map(int, vec_a)))
-    S = compute_MSM(list(map(affine_to_projective, vec_S)), list(map(int, vec_a)))
+    R = compute_MSM(list(map(affine_to_projective, vec_R)), vec_a)
+    S = compute_MSM(list(map(affine_to_projective, vec_S)), vec_a)
 
     cm_T: GroupCommitment = GroupCommitment.new(crs.G_t, crs.H, multiply(R, int(k)), r_t)
     cm_U: GroupCommitment = GroupCommitment.new(crs.G_u, crs.H, multiply(S, int(k)), r_u)
@@ -104,7 +104,7 @@ class CurdleProofsProof:
 
     A_prime = add(add(A, cm_T.T_1), cm_U.T_1)
 
-    vec_G_with_blinders = list(map(affine_to_projective, crs.vec_G)) + list(map(affine_to_projective, crs.vec_H[:(N_BLINDERS - 2)])) + [crs.G_t, crs.G_u]
+    vec_G_with_blinders = crs.vec_G + crs.vec_H[:(N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
 
     vec_T_with_blinders = list(map(affine_to_projective, vec_T)) + [Z1, Z1, crs.H, Z1]
 
@@ -156,11 +156,11 @@ class CurdleProofsProof:
     vec_a = transcript.get_and_append_challenges(b'curdleproofs_vec_a', ell)
 
     self.same_perm_proof.verify(
-      crs_G_vec=list(map(affine_to_projective, crs.vec_G)),
-      crs_H_vec=list(map(affine_to_projective, crs.vec_H)),
+      crs_G_vec=crs.vec_G,
+      crs_H_vec=crs.vec_H,
       crs_U=crs.H,
-      crs_G_sum=affine_to_projective(crs.G_sum),
-      crs_H_sum=affine_to_projective(crs.H_sum),
+      crs_G_sum=crs.G_sum,
+      crs_H_sum=crs.H_sum,
       A=self.A,
       M=M,
       vec_a=vec_a,
@@ -182,7 +182,7 @@ class CurdleProofsProof:
 
     A_prime = add(add(self.A, self.cm_T.T_1), self.cm_U.T_1)
 
-    vec_G_with_blinders = list(map(affine_to_projective, crs.vec_G)) + list(map(affine_to_projective, crs.vec_H[:(N_BLINDERS - 2)])) + [crs.G_t, crs.G_u]
+    vec_G_with_blinders = crs.vec_G + crs.vec_H[:(N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
 
     vec_T_with_blinders = list(map(affine_to_projective, vec_T)) + [Z1, Z1, crs.H, Z1]
 
@@ -199,8 +199,8 @@ class CurdleProofsProof:
       msm_accumulator=msm_accumulator,
     )
 
-    msm_accumulator.accumulate_check(self.R, list(map(affine_to_projective, vec_R)), list(map(int, vec_a)))
-    msm_accumulator.accumulate_check(self.S, list(map(affine_to_projective, vec_S)), list(map(int, vec_a)))
+    msm_accumulator.accumulate_check(self.R, list(map(affine_to_projective, vec_R)), vec_a)
+    msm_accumulator.accumulate_check(self.S, list(map(affine_to_projective, vec_S)), vec_a)
 
     msm_verify = msm_accumulator.verify()
 
@@ -227,96 +227,6 @@ def shuffle_permute_and_commit_input(
   sigma_ell = get_permutation(range_as_fr, permutation)
 
   vec_m_blinders = generate_blinders(N_BLINDERS)
-  M = add(compute_MSM(list(map(affine_to_projective, crs.vec_G)), list(map(int, sigma_ell))), compute_MSM(list(map(affine_to_projective, crs.vec_H)), list(map(int, vec_m_blinders))))
+  M = add(compute_MSM(crs.vec_G, sigma_ell), compute_MSM(crs.vec_H, vec_m_blinders))
 
   return vec_T, vec_U, M, vec_m_blinders
-
-def test_shuffle_argument():
-  N = 64
-  ell = N - N_BLINDERS
-
-  crs = CurdleproofsCrs(ell, N_BLINDERS)
-
-  permutation = list(range(ell))
-  random.shuffle(permutation)
-  k = Fr(random.randint(1, Fr.field_modulus))
-
-  vec_R = [normalize(get_random_point()) for _ in range(ell)]
-  vec_S = [normalize(get_random_point()) for _ in range(ell)]
-
-  vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(crs, vec_R, vec_S, permutation, k)
-
-  shuffle_proof: CurdleProofsProof = CurdleProofsProof.new(
-    crs=crs,
-    vec_R=vec_R,
-    vec_S=vec_S,
-    vec_T=vec_T,
-    vec_U=vec_U,
-    M=M,
-    permutation=permutation,
-    k=k,
-    vec_m_blinders=vec_m_blinders,
-  )
-
-  print("shuffle proof", shuffle_proof)
-
-  # for i in range(50):
-  #   print("iter ", i)
-  verify, err = shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
-  print("verify", verify)
-  print("err", err)
-
-def test_bad_shuffle_argument():
-  N = 128
-  ell = N - N_BLINDERS
-
-  crs = CurdleproofsCrs(ell, N_BLINDERS)
-
-  permutation = list(range(ell))
-  random.shuffle(permutation)
-  k = Fr(random.randint(1, Fr.field_modulus))
-
-  vec_R = [normalize(get_random_point()) for _ in range(ell)]
-  vec_S = [normalize(get_random_point()) for _ in range(ell)]
-
-  vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(crs, vec_R, vec_S, permutation, k)
-  
-  shuffle_proof: CurdleProofsProof = CurdleProofsProof.new(
-    crs=crs,
-    vec_R=vec_R,
-    vec_S=vec_S,
-    vec_T=vec_T,
-    vec_U=vec_U,
-    M=M,
-    permutation=permutation,
-    k=k,
-    vec_m_blinders=vec_m_blinders,
-  )
-
-  print("shuffle proof", shuffle_proof)
-
-  verify, err = shuffle_proof.verify(crs, vec_S, vec_R, vec_T, vec_U, M)
-  print("false verify", verify)
-  print("err", err)
-
-  another_permutation = list(range(ell))
-  random.shuffle(another_permutation)
-
-  verify, err = shuffle_proof.verify(crs, vec_R, vec_S, get_permutation(vec_T, another_permutation), get_permutation(vec_U, another_permutation), M)
-  print("false verify also", verify)
-  print("err", err)
-
-  verify, err = shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, multiply(M, int(k)))
-  print("false verify also also", verify)
-  print("err", err)
-
-  another_k = Fr(random.randint(1, Fr.field_modulus))
-  another_vec_T = [normalize(multiply(affine_to_projective(T), int(another_k))) for T in vec_T]
-  another_vec_U = [normalize(multiply(affine_to_projective(U), int(another_k))) for U in vec_U]
-
-  verify, err = shuffle_proof.verify(crs, vec_R, vec_S, another_vec_T, another_vec_U, M)
-  print("false verify also also also", verify)
-  print("err", err)
-
-test_shuffle_argument()
-test_bad_shuffle_argument()

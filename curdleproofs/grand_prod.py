@@ -1,9 +1,9 @@
 from functools import reduce
 import operator
 import random
-from crs import CurdleproofsCrs, get_random_point
+from crs import CurdleproofsCrs
 from ipa import IPA, generate_blinders, inner_product
-from util import invert, point_projective_to_bytes
+from util import invert, point_projective_to_bytes, get_random_point
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, affine_to_projective
@@ -21,8 +21,8 @@ class GrandProductProof:
   @classmethod
   def new(
     cls: type[T_GrandProductProof],
-    crs_G_vec: List[PointAffine],
-    crs_H_vec: List[PointAffine],
+    crs_G_vec: List[PointProjective],
+    crs_H_vec: List[PointProjective],
     crs_U: PointProjective,
     B: PointProjective,
     gprod_result: Fr,
@@ -44,7 +44,7 @@ class GrandProductProof:
       vec_c.append(vec_c[i] * vec_b[i])
     
     vec_c_blinders = generate_blinders(n_blinders)
-    C = add(compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_c))), compute_MSM(list(map(affine_to_projective, crs_H_vec)), list(map(int, vec_c_blinders))))
+    C = add(compute_MSM(crs_G_vec, vec_c), compute_MSM(crs_H_vec, vec_c_blinders))
 
     vec_r_b_plus_alpha = [r_b_i + alpha for r_b_i in vec_b_blinders]
     r_p = inner_product(vec_r_b_plus_alpha, vec_c_blinders)
@@ -55,13 +55,13 @@ class GrandProductProof:
     beta_inv = invert(beta)
 
     pow_beta_inv = beta_inv
-    vec_G_prime: List[PointAffine] = []
+    vec_G_prime: List[PointProjective] = []
     for G_i in crs_G_vec:
-      G_prime = multiply(affine_to_projective(G_i), int(pow_beta_inv))
-      vec_G_prime.append(normalize(G_prime))
+      G_prime = multiply(G_i, int(pow_beta_inv))
+      vec_G_prime.append(G_prime)
       pow_beta_inv *= beta_inv
 
-    vec_H_prime = [normalize(multiply(affine_to_projective(H_i), int(beta_inv ** (ell + 1)))) for H_i in crs_H_vec]
+    vec_H_prime = [multiply(H_i, int(beta_inv ** (ell + 1))) for H_i in crs_H_vec]
 
     vec_b_prime: List[Fr] = []
     pow_beta = beta
@@ -80,7 +80,7 @@ class GrandProductProof:
     vec_d_blinders = [(beta ** (ell + 1)) * r_b_i for r_b_i in vec_r_b_plus_alpha]
 
     vec_alphabeta = [alpha * (beta ** (ell + 1)) for _ in range(n_blinders)]
-    D = add(add(B, neg(compute_MSM(list(map(affine_to_projective, vec_G_prime)), list(map(int, vec_beta_powers))))), compute_MSM(list(map(affine_to_projective, vec_H_prime)), list(map(int, vec_alphabeta))))
+    D = add(add(B, neg(compute_MSM(vec_G_prime, vec_beta_powers))), compute_MSM(vec_H_prime, vec_alphabeta))
 
     vec_G = crs_G_vec + crs_H_vec
     vec_G_prime += vec_H_prime
@@ -94,8 +94,8 @@ class GrandProductProof:
     # print("computed", inner_product(vec_c, vec_d))
 
     assert inner_product(vec_c, vec_d) == inner_prod
-    assert eq(compute_MSM(list(map(affine_to_projective, vec_G)), list(map(int, vec_c))), C)
-    assert eq(compute_MSM(list(map(affine_to_projective, vec_G_prime)), list(map(int, vec_d))), D)
+    assert eq(compute_MSM(vec_G, vec_c), C)
+    assert eq(compute_MSM(vec_G_prime, vec_d), D)
 
     (ipa_proof, err) = IPA.new(
       crs_G_vec=vec_G,
@@ -115,11 +115,11 @@ class GrandProductProof:
     return cls(C, r_p, ipa_proof), None
 
   def verify(self,
-    crs_G_vec: List[PointAffine],
-    crs_H_vec: List[PointAffine],
+    crs_G_vec: List[PointProjective],
+    crs_H_vec: List[PointProjective],
     crs_U: PointProjective,
-    crs_G_sum: PointAffine,
-    crs_H_sum: PointAffine,
+    crs_G_sum: PointProjective,
+    crs_H_sum: PointProjective,
 
     B: PointProjective,
     gprod_result: Fr,
@@ -152,7 +152,7 @@ class GrandProductProof:
     vec_u.extend([beta_inv ** (ell + 1) for _ in range(0, n_blinders)])
 
     # Compute D
-    D = add(add(B, neg(multiply(affine_to_projective(crs_G_sum), int(beta_inv)))), multiply(affine_to_projective(crs_H_sum), int(alpha)))
+    D = add(add(B, neg(multiply(crs_G_sum, int(beta_inv)))), multiply(crs_H_sum, int(alpha)))
 
     # Step 4
     # Build G
@@ -175,105 +175,3 @@ class GrandProductProof:
       return False, err
     
     return True, ""
-
-def test_gprod():
-  transcript_prover = CurdleproofsTranscript()
-  
-  n = 128
-  n_blinders = 4
-  ell = n - n_blinders
-
-  crs_G_vec = [normalize(get_random_point()) for _ in range(ell)]
-  crs_H_vec = [normalize(get_random_point()) for _ in range(n_blinders)]
-  crs_U = get_random_point()
-  crs_G_sum = normalize(reduce(add, list(map(affine_to_projective, crs_G_vec)), Z1))
-  crs_H_sum = normalize(reduce(add, list(map(affine_to_projective, crs_H_vec)), Z1))
-
-  vec_b = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(ell)]
-  vec_b_blinders = generate_blinders(n_blinders)
-
-  gprod_result = reduce(operator.mul, vec_b, Fr.one())
-
-  B = add(compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_b))), compute_MSM(list(map(affine_to_projective, crs_H_vec)), list(map(int, vec_b_blinders))))
-
-  (gprod_proof, err) = GrandProductProof.new(
-    crs_G_vec=crs_G_vec,
-    crs_H_vec=crs_H_vec,
-    crs_U=crs_U,
-    B=B,
-    gprod_result=gprod_result,
-    vec_b=vec_b,
-    vec_b_blinders=vec_b_blinders,
-    transcript=transcript_prover
-  )
-
-  print("Prover result: ", gprod_proof)
-  print("Prover error:", err)
-
-  transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulator()
-
-  (result, err) = gprod_proof.verify(
-    crs_G_vec=crs_G_vec,
-    crs_H_vec=crs_H_vec,
-    crs_U=crs_U,
-    crs_G_sum=crs_G_sum,
-    crs_H_sum=crs_H_sum,
-    B=B,
-    gprod_result=gprod_result,
-    n_blinders=n_blinders,
-    transcript=transcript_verifier,
-    msm_accumulator=msm_accumulator
-  )
-
-  msm_verify = msm_accumulator.verify()
-
-  print("Result: ", result)
-  print("MSM verify: ", msm_verify)
-  print("Error: ", err)
-
-  # Wrong test
-  transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulator()
-  (result, err) = gprod_proof.verify(
-    crs_G_vec=crs_G_vec,
-    crs_H_vec=crs_H_vec,
-    crs_U=crs_U,
-    crs_G_sum=crs_G_sum,
-    crs_H_sum=crs_H_sum,
-    B=B,
-    gprod_result=gprod_result + Fr.one(),
-    n_blinders=n_blinders,
-    transcript=transcript_verifier,
-    msm_accumulator=msm_accumulator
-  )
-
-  msm_verify = msm_accumulator.verify()
-
-  print("Wrong Result: ", result)
-  print("Wrong MSM verify: ", msm_verify)
-  print("Wrong Error: ", err)
-
-  # Wrong test
-  transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulator()
-  (result, err) = gprod_proof.verify(
-    crs_G_vec=crs_G_vec,
-    crs_H_vec=crs_H_vec,
-    crs_U=crs_U,
-    crs_G_sum=crs_G_sum,
-    crs_H_sum=crs_H_sum,
-    B=multiply(B, 3),
-    gprod_result=gprod_result,
-    n_blinders=n_blinders,
-    transcript=transcript_verifier,
-    msm_accumulator=msm_accumulator
-  )
-
-  msm_verify = msm_accumulator.verify()
-
-  print("Wrong Result: ", result)
-  print("Wrong MSM verify: ", msm_verify)
-  print("Wrong Error: ", err)
-
-# test_gprod()

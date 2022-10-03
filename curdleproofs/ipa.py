@@ -1,28 +1,12 @@
 from math import log2
 import random
-from crs import CurdleproofsCrs, get_random_point
-from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes
+from crs import CurdleproofsCrs
+from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes, get_random_point
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from util import PointAffine, PointProjective, Fr, field_to_bytes, invert
+from util import PointAffine, PointProjective, Fr, field_to_bytes, invert, generate_blinders, inner_product, get_verification_scalars_bitstring
 from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg
-
-def get_verification_scalars_bitstring(n: int, lg_n: int) -> List[List[int]]:
-  bitstrings: List[List[int]] = []
-  
-  for i in range(0, n):
-    bs = bin(i)[2:].zfill(lg_n)
-    bitstrings.append([j for j in range(0, lg_n) if bs[j] == '1'])
-
-  return bitstrings
-
-def generate_blinders(n: int) -> List[Fr]:
-  return [Fr(random.randint(0, Fr.field_modulus)) for _ in range(0, n)]
-
-def inner_product(a: List[Fr], b: List[Fr]) -> Fr:
-  assert len(a) == len(b)
-  return sum([a[i] * b[i] for i in range(0, len(a))], Fr.zero())
 
 def generate_ipa_blinders(c: List[Fr], d: List[Fr]) -> Tuple[List[Fr], List[Fr]]:
   n = len(c)
@@ -70,8 +54,8 @@ class IPA:
 
   @classmethod
   def new(cls: Type[T_IPA],
-    crs_G_vec: List[PointAffine],
-    crs_G_prime_vec: List[PointAffine],
+    crs_G_vec: List[PointProjective],
+    crs_G_prime_vec: List[PointProjective],
     crs_H: PointProjective,
     C: PointProjective,
     D: PointProjective,
@@ -89,8 +73,8 @@ class IPA:
 
     (vec_r_c, vec_r_d) = generate_ipa_blinders(vec_c, vec_d)
 
-    B_c = compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_r_c)))
-    B_d = compute_MSM(list(map(affine_to_projective, crs_G_prime_vec)), list(map(int, vec_r_d)))
+    B_c = compute_MSM(crs_G_vec, vec_r_c)
+    B_d = compute_MSM(crs_G_prime_vec, vec_r_d)
 
     transcript.append_list(b'ipa_step1', points_projective_to_bytes([C, D]))
     transcript.append(b'ipa_step1', field_to_bytes(z))
@@ -118,10 +102,10 @@ class IPA:
       G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
       G_prime_L, G_prime_R = crs_G_prime_vec[:n], crs_G_prime_vec[n:]
 
-      L_C = add(compute_MSM(list(map(affine_to_projective, G_R)), list(map(int, c_L))), multiply(H, int(inner_product(c_L, d_R))))
-      L_D = compute_MSM(list(map(affine_to_projective, G_prime_L)), list(map(int, d_R)))
-      R_C = add(compute_MSM(list(map(affine_to_projective, G_L)), list(map(int, c_R))), multiply(H, int(inner_product(c_R, d_L))))
-      R_D = compute_MSM(list(map(affine_to_projective, G_prime_R)), list(map(int, d_L)))
+      L_C = add(compute_MSM(G_R, c_L), multiply(H, int(inner_product(c_L, d_R))))
+      L_D = compute_MSM(G_prime_L, d_R)
+      R_C = add(compute_MSM(G_L, c_R), multiply(H, int(inner_product(c_R, d_L))))
+      R_D = compute_MSM(G_prime_R, d_L)
 
       vec_L_C.append(L_C)
       vec_R_C.append(R_C)
@@ -135,8 +119,8 @@ class IPA:
       for i in range(0, n):
         c_L[i] += gamma_inv * c_R[i]
         d_L[i] += gamma * d_R[i]
-        G_L[i] = normalize(add(affine_to_projective(G_L[i]), multiply(affine_to_projective(G_R[i]), int(gamma))))
-        G_prime_L[i] = normalize(add(affine_to_projective(G_prime_L[i]), multiply(affine_to_projective(G_prime_R[i]), int(gamma_inv))))
+        G_L[i] = add(G_L[i], multiply(G_R[i], int(gamma)))
+        G_prime_L[i] = add(G_prime_L[i], multiply(G_prime_R[i], int(gamma_inv)))
       
       vec_c = c_L
       vec_d = d_L
@@ -175,7 +159,7 @@ class IPA:
     return ((challenges, challenges_inv, vec_s, vec_s_inv), None)
 
   def verify(self,
-    crs_G_vec: List[PointAffine],
+    crs_G_vec: List[PointProjective],
     crs_H: PointProjective,
     C: PointProjective,
     D: PointProjective,
@@ -201,89 +185,19 @@ class IPA:
     
     vec_c_times_s = [self.c_final * s for s in vec_s]
     vec_rhs_scalars = vec_c_times_s + [self.c_final * self.d_final * beta]
-    vec_G_H = crs_G_vec + [normalize(crs_H)]
+    vec_G_H = crs_G_vec + [crs_H]
 
     H = multiply(crs_H, int(beta))
     C_a: PointProjective = add(add(self.B_c, multiply(C, int(alpha))), multiply(H, int(alpha * alpha * inner_prod)))
 
-    point_lhs = add(add(compute_MSM(self.vec_L_C, list(map(int, vec_gamma))), C_a), compute_MSM(self.vec_R_C, list(map(int, vec_gamma_inv))))
+    point_lhs = add(add(compute_MSM(self.vec_L_C, vec_gamma), C_a), compute_MSM(self.vec_R_C, vec_gamma_inv))
 
-    msm_accumulator.accumulate_check(point_lhs, list(map(affine_to_projective, vec_G_H)), list(map(int, vec_rhs_scalars)))
+    msm_accumulator.accumulate_check(point_lhs, vec_G_H, vec_rhs_scalars)
 
     vec_d_div_s = [self.d_final * (s_inv_i * u_i) for (s_inv_i, u_i) in zip(vec_s_inv, vec_u)]
 
     D_a = add(self.B_d, multiply(D, int(alpha)))
-    point_lhs = add(add(compute_MSM(self.vec_L_D, list(map(int, vec_gamma))), D_a), compute_MSM(self.vec_R_D, list(map(int, vec_gamma_inv))))
-    msm_accumulator.accumulate_check(point_lhs, list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_d_div_s)))
+    point_lhs = add(add(compute_MSM(self.vec_L_D, vec_gamma), D_a), compute_MSM(self.vec_R_D, vec_gamma_inv))
+    msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_d_div_s)
 
     return [True, '']
-
-def test_ipa():
-  transcript = CurdleproofsTranscript()
-
-  n = 128
-
-  crs_G_vec = [normalize(get_random_point()) for _ in range(0, n)]
-
-  vec_u = generate_blinders(n)
-  crs_G_prime_vec = [normalize(multiply(affine_to_projective(G_i), int(u_i))) for (G_i, u_i) in zip(crs_G_vec, vec_u)]
-  crs_H = get_random_point()
-
-  vec_b = [Fr(random.randint(1, Fr.field_modulus)) for _ in range(0, n)]
-  vec_c = [Fr(random.randint(1, Fr.field_modulus)) for _ in range(0, n)]
-
-  z = inner_product(vec_b, vec_c)
-  print("prod = ", vec_b, vec_c, z)
-
-  B = compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_b)))
-  C = compute_MSM(list(map(affine_to_projective, crs_G_prime_vec)), list(map(int, vec_c)))
-
-  (proof, err) = IPA.new(crs_G_vec = crs_G_vec,
-    crs_G_prime_vec = crs_G_prime_vec,
-    crs_H = crs_H,
-    C = B,
-    D = C,
-    z = z,
-    vec_c = vec_b,
-    vec_d = vec_c,
-    transcript = transcript
-  )
-
-  print("proof: ", proof, proof.vec_L_C, proof.vec_L_D, proof.vec_R_C, proof.vec_R_D, "crs len", len(crs_G_vec))
-  print("err: ", err)
-
-  transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulator()
-
-  (result, err) = proof.verify(crs_G_vec = crs_G_vec,
-    crs_H = crs_H,
-    C = B,
-    D = C,
-    inner_prod = z,
-    vec_u = vec_u,
-    transcript = transcript_verifier,
-    msm_accumulator = msm_accumulator
-  )
-  msm_verify = msm_accumulator.verify()
-
-  print("result: ", result)
-  print("msm_verify: ", msm_verify)
-  print("err: ", err)
-
-  transcript_wrong = CurdleproofsTranscript()
-  msm_accumulator_wrong = MSMAccumulator()
-  (result_wrong, err_wrong) =  proof.verify(crs_G_vec = crs_G_vec,
-    crs_H = crs_H,
-    C = B,
-    D = C,
-    inner_prod = z + Fr.one(),
-    vec_u = vec_u,
-    transcript = transcript_wrong,
-    msm_accumulator = msm_accumulator_wrong
-  )
-  msm_wrong_verify = msm_accumulator_wrong.verify()
-  print("result_wrong: ", result_wrong)
-  print("msm_wrong_verify: ", msm_wrong_verify)
-  print("err_wrong: ", err_wrong)
-
-# test_ipa()

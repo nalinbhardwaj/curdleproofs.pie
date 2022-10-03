@@ -47,7 +47,7 @@ class MSMAccumulator:
   def accumulate_check(self,
     C: PointProjective,
     bases: List[PointProjective],
-    scalars: List[int]
+    scalars: List[Union[int, Fr]]
   ) -> None:
     random_factor = Fr(random.randint(1, Fr.field_modulus))
 
@@ -55,7 +55,7 @@ class MSMAccumulator:
 
     for (base, scalar) in zip(bases, scalars):
       # print("base", base)
-      if base[-1] == FQ.zero():
+      if is_inf(base):
         continue
       base_affine_int = tuple(map(int, normalize(base)))
       # print("base_affine_int", base_affine_int)

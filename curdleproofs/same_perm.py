@@ -3,22 +3,17 @@ from functools import reduce
 from math import perm
 import random
 
-from crs import CurdleproofsCrs, get_random_point
+from crs import CurdleproofsCrs
 from grand_prod import GrandProductProof
 from ipa import generate_blinders
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar
-from util import PointAffine, PointProjective, Fr, field_to_bytes, points_projective_to_bytes
+from util import PointAffine, PointProjective, Fr, field_to_bytes, points_projective_to_bytes, get_random_point, get_permutation
 from msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg, Z1
 from operator import mul as op_mul
 
 T_SAME_PERM_PROOF = TypeVar('T_SAME_PERM_PROOF', bound="SamePermutationProof")
-
-T_GET_PERMUTATION = TypeVar('T_GET_PERMUTATION')
-
-def get_permutation(vec_a: List[T_GET_PERMUTATION], permutation: List[Fr]) -> List[T_GET_PERMUTATION]:
-  return [vec_a[i] for i in permutation]
 
 class SamePermutationProof:
   def __init__(self,
@@ -57,13 +52,13 @@ class SamePermutationProof:
     gprod_result = reduce(op_mul, permuted_polynomial_factors, Fr.one())
 
     vec_beta_repeated = [beta] * ell
-    B = add(add(A, multiply(M, int(alpha))), compute_MSM(crs_G_vec, list(map(int, vec_beta_repeated))))
+    B = add(add(A, multiply(M, int(alpha))), compute_MSM(crs_G_vec, vec_beta_repeated))
 
     vec_b_blinders = [vec_a_blinders[i] + alpha * vec_m_blinders[i] for i in range(0, n_blinders)]
 
     (grand_product_proof, err) = GrandProductProof.new(
-      crs_G_vec=list(map(normalize, crs_G_vec)),
-      crs_H_vec=list(map(normalize, crs_H_vec)),
+      crs_G_vec=crs_G_vec,
+      crs_H_vec=crs_H_vec,
       crs_U=crs_U,
       B=B,
       gprod_result=gprod_result,
@@ -108,15 +103,15 @@ class SamePermutationProof:
     msm_accumulator.accumulate_check(
       add(add(self.B, neg(A)), neg(multiply(M, int(alpha)))),
       crs_G_vec,
-      list(map(int, vec_beta_repeated)),
+      vec_beta_repeated,
     )
 
     (grand_prod_verify, err) = self.grand_prod_proof.verify(
-      crs_G_vec=list(map(normalize, crs_G_vec)),
-      crs_H_vec=list(map(normalize, crs_H_vec)),
+      crs_G_vec=crs_G_vec,
+      crs_H_vec=crs_H_vec,
       crs_U=crs_U,
-      crs_G_sum=normalize(crs_G_sum),
-      crs_H_sum=normalize(crs_H_sum),
+      crs_G_sum=crs_G_sum,
+      crs_H_sum=crs_H_sum,
       B=self.B,
       gprod_result=gprod_result,
       n_blinders=n_blinders,
@@ -128,70 +123,3 @@ class SamePermutationProof:
       return (False, err)
     
     return (True, '')
-
-def test_same_permutation_proof():
-  transcript_prover = CurdleproofsTranscript()
-
-  n = 128
-  n_blinders = 4
-  ell = n - n_blinders
-
-  crs_G_vec = [get_random_point() for _ in range(0, ell)]
-  crs_H_vec = [get_random_point() for _ in range(0, n_blinders)]
-
-  crs_U = get_random_point()
-  crs_G_sum = reduce(add, crs_G_vec, Z1)
-  crs_H_sum = reduce(add, crs_H_vec, Z1)
-
-  vec_a_blinders = generate_blinders(n_blinders)
-  vec_m_blinders = generate_blinders(n_blinders)
-
-  permutation = list(range(0, ell))
-  random.shuffle(permutation)
-
-  vec_a = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(0, ell)]
-  vec_a_permuted = get_permutation(vec_a, permutation)
-
-  A = add(compute_MSM(crs_G_vec, list(map(int, vec_a_permuted))), compute_MSM(crs_H_vec, list(map(int, vec_a_blinders))))
-  M = add(compute_MSM(crs_G_vec, list(map(int, permutation))), compute_MSM(crs_H_vec, list(map(int, vec_m_blinders))))
-
-  (same_perm_proof, err) = SamePermutationProof.new(
-    crs_G_vec=crs_G_vec,
-    crs_H_vec=crs_H_vec,
-    crs_U=crs_U,
-    A=A,
-    M=M,
-    vec_a=vec_a,
-    permutation=permutation,
-    vec_a_blinders=vec_a_blinders,
-    vec_m_blinders=vec_m_blinders,
-    transcript=transcript_prover
-  )
-
-  print("Proof: ", same_perm_proof)
-  print("Error: ", err)
-
-  transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulator()
-
-  (verify, err) = same_perm_proof.verify(
-    crs_G_vec=crs_G_vec,
-    crs_H_vec=crs_H_vec,
-    crs_U=crs_U,
-    crs_G_sum=crs_G_sum,
-    crs_H_sum=crs_H_sum,
-    A=A,
-    M=M,
-    vec_a=vec_a,
-    n_blinders=n_blinders,
-    transcript=transcript_verifier,
-    msm_accumulator=msm_accumulator
-  )
-
-  msm_verify = msm_accumulator.verify()
-
-  print("Verify: ", verify)
-  print("Error: ", err)
-  print("MSM verify: ", msm_verify)
-
-# test_same_permutation_proof()

@@ -1,8 +1,7 @@
 from math import log2
 import random
-from crs import CurdleproofsCrs, get_random_point
-from ipa import generate_blinders, get_verification_scalars_bitstring
-from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes
+from crs import CurdleproofsCrs
+from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes, get_random_point, generate_blinders, get_verification_scalars_bitstring
 from transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, invert
@@ -64,9 +63,9 @@ class SameMSMProof:
 
     vec_r = generate_blinders(n)
 
-    B_a = compute_MSM(crs_G_vec, list(map(int, vec_r)))
-    B_t = compute_MSM(vec_T, list(map(int, vec_r)))
-    B_u = compute_MSM(vec_U, list(map(int, vec_r)))
+    B_a = compute_MSM(crs_G_vec, vec_r)
+    B_t = compute_MSM(vec_T, vec_r)
+    B_u = compute_MSM(vec_U, vec_r)
 
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes([A, Z_t, Z_u]))
     transcript.append_list(b'same_msm_step1', points_projective_to_bytes(vec_T + vec_U))
@@ -84,12 +83,12 @@ class SameMSMProof:
       U_L, U_R = vec_U[:n], vec_U[n:]
       G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
 
-      L_A = compute_MSM(G_R, list(map(int, x_L)))
-      L_T = compute_MSM(T_R, list(map(int, x_L)))
-      L_U = compute_MSM(U_R, list(map(int, x_L)))
-      R_A = compute_MSM(G_L, list(map(int, x_R)))
-      R_T = compute_MSM(T_L, list(map(int, x_R)))
-      R_U = compute_MSM(U_L, list(map(int, x_R)))
+      L_A = compute_MSM(G_R, x_L)
+      L_T = compute_MSM(T_R, x_L)
+      L_U = compute_MSM(U_R, x_L)
+      R_A = compute_MSM(G_L, x_R)
+      R_T = compute_MSM(T_L, x_R)
+      R_U = compute_MSM(U_L, x_R)
 
       vec_L_A.append(L_A)
       vec_L_T.append(L_T)
@@ -179,61 +178,13 @@ class SameMSMProof:
     Z_t_a = add(self.B_t, multiply(Z_t, int(alpha)))
     Z_u_a = add(self.B_u, multiply(Z_u, int(alpha)))
 
-    point_lhs = add(add(compute_MSM(self.vec_L_A, list(map(int, vec_gamma))), A_a), compute_MSM(self.vec_R_A, list(map(int, vec_gamma_inv))))
-    msm_accumulator.accumulate_check(point_lhs, crs_G_vec, list(map(int, vec_x_times_s)))
+    point_lhs = add(add(compute_MSM(self.vec_L_A, vec_gamma), A_a), compute_MSM(self.vec_R_A, vec_gamma_inv))
+    msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_x_times_s)
 
-    point_lhs = add(add(compute_MSM(self.vec_L_T, list(map(int, vec_gamma))), Z_t_a), compute_MSM(self.vec_R_T, list(map(int, vec_gamma_inv))))
-    msm_accumulator.accumulate_check(point_lhs, vec_T, list(map(int, vec_x_times_s)))
+    point_lhs = add(add(compute_MSM(self.vec_L_T, vec_gamma), Z_t_a), compute_MSM(self.vec_R_T, vec_gamma_inv))
+    msm_accumulator.accumulate_check(point_lhs, vec_T, vec_x_times_s)
 
-    point_lhs = add(add(compute_MSM(self.vec_L_U, list(map(int, vec_gamma))), Z_u_a), compute_MSM(self.vec_R_U, list(map(int, vec_gamma_inv))))
-    msm_accumulator.accumulate_check(point_lhs, vec_U, list(map(int, vec_x_times_s)))
+    point_lhs = add(add(compute_MSM(self.vec_L_U, vec_gamma), Z_u_a), compute_MSM(self.vec_R_U, vec_gamma_inv))
+    msm_accumulator.accumulate_check(point_lhs, vec_U, vec_x_times_s)
 
     return True, ''
-
-def test_same_msm():
-  transcript_prover = CurdleproofsTranscript()
-  n = 128
-
-  crs_G_vec = [normalize(get_random_point()) for _ in range(0, n)]
-
-  vec_T = [normalize(get_random_point()) for _ in range(0, n)]
-  vec_U = [normalize(get_random_point()) for _ in range(0, n)]
-  vec_x = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(0, n)]
-
-  A = compute_MSM(list(map(affine_to_projective, crs_G_vec)), list(map(int, vec_x)))
-  Z_t = compute_MSM(list(map(affine_to_projective, vec_T)), list(map(int, vec_x)))
-  Z_u = compute_MSM(list(map(affine_to_projective, vec_U)), list(map(int, vec_x)))
-
-  proof: SameMSMProof = SameMSMProof.new(
-    crs_G_vec=crs_G_vec,
-    A=A,
-    Z_t=Z_t,
-    Z_u=Z_u,
-    vec_T=vec_T,
-    vec_U=vec_U,
-    vec_x=vec_x,
-    transcript=transcript_prover
-  )
-
-  print("Proof", proof)
-
-  transcript_verifier = CurdleproofsTranscript()
-  msm_accumulator = MSMAccumulator()
-
-  (result, err) = proof.verify(
-    crs_G_vec=list(map(affine_to_projective, crs_G_vec)),
-    A=A,
-    Z_t=Z_t,
-    Z_u=Z_u,
-    vec_T=vec_T,
-    vec_U=vec_U,
-    transcript=transcript_verifier,
-    msm_accumulator=msm_accumulator
-  )
-
-  msm_verify = msm_accumulator.verify()
-  print("Result", result)
-  print("MSM verify", msm_verify)
-  print("Error", err)
-
-# test_same_msm()

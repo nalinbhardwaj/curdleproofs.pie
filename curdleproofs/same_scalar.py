@@ -1,12 +1,12 @@
 import itertools
 import random
 
-from crs import CurdleproofsCrs, get_random_point
+from crs import CurdleproofsCrs
 from commitment import GroupCommitment
 from util import points_projective_to_bytes
 from transcript import CurdleproofsTranscript
 from typing import List, Tuple, TypeVar
-from util import PointAffine, PointProjective, Fr, field_to_bytes
+from util import PointAffine, PointProjective, Fr, field_to_bytes, get_random_point
 from msm_accumulator import MSMAccumulator
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg
 from operator import mul as op_mul
@@ -75,52 +75,3 @@ class SameScalarProof:
       return (True, "")
     else:
       return (False, "Failure")
-
-def test_same_scalar_arg():
-  transcript_prover = CurdleproofsTranscript()
-
-  crs_G_t = get_random_point()
-  crs_G_u = get_random_point()
-  crs_H = get_random_point()
-
-  R = get_random_point()
-  S = get_random_point()
-
-  k = Fr(random.randint(1, Fr.field_modulus))
-  r_t = Fr(random.randint(1, Fr.field_modulus))
-  r_u = Fr(random.randint(1, Fr.field_modulus))
-
-  cm_T = GroupCommitment.new(crs_G_t, crs_H, multiply(R, int(k)), r_t)
-  cm_U = GroupCommitment.new(crs_G_u, crs_H, multiply(S, int(k)), r_u)
-
-  proof = SameScalarProof.new(
-    crs_G_t=crs_G_t,
-    crs_G_u=crs_G_u,
-    crs_H=crs_H,
-    R=R,
-    S=S,
-    cm_T=cm_T,
-    cm_U=cm_U,
-    k=k,
-    r_t=r_t,
-    r_u=r_u,
-    transcript=transcript_prover
-  )
-
-  print("proof", proof)
-
-  transcript_verifier = CurdleproofsTranscript()
-  (res, err) = proof.verify(
-    crs_G_t=crs_G_t,
-    crs_G_u=crs_G_u,
-    crs_H=crs_H,
-    R=R,
-    S=S,
-    cm_T=cm_T,
-    cm_U=cm_U,
-    transcript=transcript_verifier
-  )
-  print("res", res)
-  print("err", err)
-
-# test_same_scalar_arg()
