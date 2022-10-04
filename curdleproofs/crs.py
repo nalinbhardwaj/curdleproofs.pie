@@ -9,8 +9,7 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     add,
     Z1,
 )
-from util import PointProjective, affine_to_projective, get_random_point
-import itertools
+from curdleproofs.util import PointProjective, affine_to_projective, get_random_point
 
 
 class CurdleproofsCrs:

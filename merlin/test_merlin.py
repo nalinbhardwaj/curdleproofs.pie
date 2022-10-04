@@ -1,5 +1,5 @@
-from .merlin_transcript import MerlinTranscript
-from .strobe import Strobe128
+from merlin.merlin_transcript import MerlinTranscript
+from merlin.strobe import Strobe128
 
 
 def test_strobe_conformance():

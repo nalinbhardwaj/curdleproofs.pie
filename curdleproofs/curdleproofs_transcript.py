@@ -3,7 +3,7 @@ from py_ecc.secp256k1.secp256k1 import bytes_to_int
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order
 from merlin import MerlinTranscript
 
-from util import Fr
+from curdleproofs.util import Fr
 
 
 class CurdleproofsTranscript(MerlinTranscript):

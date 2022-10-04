@@ -1,13 +1,13 @@
 from functools import reduce
 import operator
 import random
-from crs import CurdleproofsCrs
-from ipa import IPA, generate_blinders, inner_product
-from util import invert, point_projective_to_bytes, get_random_point
-from curdleproofs_transcript import CurdleproofsTranscript
+from curdleproofs.crs import CurdleproofsCrs
+from curdleproofs.ipa import IPA, generate_blinders, inner_product
+from curdleproofs.util import invert, point_projective_to_bytes, get_random_point
+from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar
-from util import PointAffine, PointProjective, Fr, field_to_bytes, affine_to_projective
-from msm_accumulator import MSMAccumulator, compute_MSM
+from curdleproofs.util import PointAffine, PointProjective, Fr, field_to_bytes, affine_to_projective
+from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,

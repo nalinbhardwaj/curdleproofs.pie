@@ -1,7 +1,7 @@
 from math import log2
 import random
-from crs import CurdleproofsCrs
-from util import (
+from curdleproofs.crs import CurdleproofsCrs
+from curdleproofs.util import (
     affine_to_projective,
     point_affine_to_bytes,
     point_projective_to_bytes,
@@ -9,9 +9,9 @@ from util import (
     points_projective_to_bytes,
     get_random_point,
 )
-from curdleproofs_transcript import CurdleproofsTranscript
+from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from util import (
+from curdleproofs.util import (
     PointAffine,
     PointProjective,
     Fr,
@@ -21,7 +21,7 @@ from util import (
     inner_product,
     get_verification_scalars_bitstring,
 )
-from msm_accumulator import MSMAccumulator, compute_MSM
+from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,

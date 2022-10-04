@@ -2,9 +2,9 @@ from functools import reduce
 from math import log2
 import operator
 import random
-from crs import CurdleproofsCrs
-from grand_prod import GrandProductProof
-from util import (
+from curdleproofs.crs import CurdleproofsCrs
+from curdleproofs.grand_prod import GrandProductProof
+from curdleproofs.util import (
     affine_to_projective,
     point_affine_to_bytes,
     point_projective_to_bytes,
@@ -13,9 +13,9 @@ from util import (
     get_random_point,
     get_permutation,
 )
-from curdleproofs_transcript import CurdleproofsTranscript
+from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from util import (
+from curdleproofs.util import (
     PointAffine,
     PointProjective,
     Fr,
@@ -25,7 +25,7 @@ from util import (
     inner_product,
     get_verification_scalars_bitstring,
 )
-from msm_accumulator import MSMAccumulator, compute_MSM
+from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,
@@ -35,12 +35,12 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     neg,
     Z1,
 )
-from ipa import IPA
-from same_perm import SamePermutationProof
-from same_msm import SameMSMProof
-from commitment import GroupCommitment
-from same_scalar import SameScalarProof
-from curdleproofs import N_BLINDERS, CurdleProofsProof, shuffle_permute_and_commit_input
+from curdleproofs.ipa import IPA
+from curdleproofs.same_perm import SamePermutationProof
+from curdleproofs.same_msm import SameMSMProof
+from curdleproofs.commitment import GroupCommitment
+from curdleproofs.same_scalar import SameScalarProof
+from curdleproofs.curdleproofs import N_BLINDERS, CurdleProofsProof, shuffle_permute_and_commit_input
 
 
 def test_ipa():

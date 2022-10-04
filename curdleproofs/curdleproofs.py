@@ -1,8 +1,8 @@
 from math import log2
 import random
-from crs import CurdleproofsCrs
-from ipa import generate_blinders
-from util import (
+from curdleproofs.crs import CurdleproofsCrs
+from curdleproofs.ipa import generate_blinders
+from curdleproofs.util import (
     affine_to_projective,
     point_affine_to_bytes,
     point_projective_to_bytes,
@@ -10,9 +10,9 @@ from util import (
     points_projective_to_bytes,
     get_random_point,
 )
-from curdleproofs_transcript import CurdleproofsTranscript
+from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from util import (
+from curdleproofs.util import (
     PointAffine,
     PointProjective,
     Fr,
@@ -20,7 +20,7 @@ from util import (
     invert,
     get_permutation,
 )
-from msm_accumulator import MSMAccumulator, compute_MSM
+from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,
@@ -32,10 +32,10 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     is_inf,
     FQ,
 )
-from same_perm import SamePermutationProof
-from same_msm import SameMSMProof
-from same_scalar import SameScalarProof
-from commitment import GroupCommitment
+from curdleproofs.same_perm import SamePermutationProof
+from curdleproofs.same_msm import SameMSMProof
+from curdleproofs.same_scalar import SameScalarProof
+from curdleproofs.commitment import GroupCommitment
 
 N_BLINDERS = 4
 

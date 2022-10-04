@@ -1,14 +1,11 @@
-import itertools
 from functools import reduce
-from math import perm
-import random
 
-from crs import CurdleproofsCrs
-from grand_prod import GrandProductProof
-from ipa import generate_blinders
-from curdleproofs_transcript import CurdleproofsTranscript
+from curdleproofs.crs import CurdleproofsCrs
+from curdleproofs.grand_prod import GrandProductProof
+from curdleproofs.ipa import generate_blinders
+from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from util import (
+from curdleproofs.util import (
     PointAffine,
     PointProjective,
     Fr,
@@ -17,7 +14,7 @@ from util import (
     get_random_point,
     get_permutation,
 )
-from msm_accumulator import MSMAccumulator, compute_MSM
+from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,
