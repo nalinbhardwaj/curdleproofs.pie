@@ -1,10 +1,15 @@
+import json
 from math import log2
 import random
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.util import (
     affine_to_projective,
+    field_from_json,
+    field_to_json,
     point_affine_to_bytes,
+    point_projective_from_json,
     point_projective_to_bytes,
+    point_projective_to_json,
     points_affine_to_bytes,
     points_projective_to_bytes,
     get_random_point,
@@ -255,3 +260,30 @@ class IPA:
         msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_d_div_s)
 
         return (True, "")
+
+    def to_json(self) -> str:
+        dic = {
+            "B_c": point_projective_to_json(self.B_c),
+            "B_d": point_projective_to_json(self.B_d),
+            "vec_L_C": [point_projective_to_json(p) for p in self.vec_L_C],
+            "vec_R_C": [point_projective_to_json(p) for p in self.vec_R_C],
+            "vec_L_D": [point_projective_to_json(p) for p in self.vec_L_D],
+            "vec_R_D": [point_projective_to_json(p) for p in self.vec_R_D],
+            "c_final": field_to_json(self.c_final),
+            "d_final": field_to_json(self.d_final),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_IPA], json_str: str) -> T_IPA:
+        dic = json.loads(json_str)
+        return cls(
+            B_c=point_projective_from_json(dic["B_c"]),
+            B_d=point_projective_from_json(dic["B_d"]),
+            vec_L_C=[point_projective_from_json(p) for p in dic["vec_L_C"]],
+            vec_R_C=[point_projective_from_json(p) for p in dic["vec_R_C"]],
+            vec_L_D=[point_projective_from_json(p) for p in dic["vec_L_D"]],
+            vec_R_D=[point_projective_from_json(p) for p in dic["vec_R_D"]],
+            c_final=field_from_json(dic["c_final"], Fr),
+            d_final=field_from_json(dic["d_final"], Fr),
+        )

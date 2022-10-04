@@ -1,3 +1,4 @@
+import json
 from math import log2
 import random
 from curdleproofs.crs import CurdleproofsCrs
@@ -5,7 +6,9 @@ from curdleproofs.ipa import generate_blinders
 from curdleproofs.util import (
     affine_to_projective,
     point_affine_to_bytes,
+    point_projective_from_json,
     point_projective_to_bytes,
+    point_projective_to_json,
     points_affine_to_bytes,
     points_projective_to_bytes,
     get_random_point,
@@ -273,6 +276,33 @@ class CurdleProofsProof:
             return False, "MSM check failed"
 
         return True, ""
+
+    def to_json(self) -> str:
+        dic = {
+            "A": point_projective_to_json(self.A),
+            "cm_T": self.cm_T.to_json(),
+            "cm_U": self.cm_U.to_json(),
+            "R": point_projective_to_json(self.R),
+            "S": point_projective_to_json(self.S),
+            "same_perm_proof": self.same_perm_proof.to_json(),
+            "same_scalar_proof": self.same_scalar_proof.to_json(),
+            "same_msm_proof": self.same_msm_proof.to_json(),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_CurdleProofsProof], json_str: str) -> T_CurdleProofsProof:
+        dic = json.loads(json_str)
+        return cls(
+            A=point_projective_from_json(dic["A"]),
+            cm_T=GroupCommitment.from_json(dic["cm_T"]),
+            cm_U=GroupCommitment.from_json(dic["cm_U"]),
+            R=point_projective_from_json(dic["R"]),
+            S=point_projective_from_json(dic["S"]),
+            same_perm_proof=SamePermutationProof.from_json(dic["same_perm_proof"]),
+            same_scalar_proof=SameScalarProof.from_json(dic["same_scalar_proof"]),
+            same_msm_proof=SameMSMProof.from_json(dic["same_msm_proof"]),
+        )
 
 
 def shuffle_permute_and_commit_input(

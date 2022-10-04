@@ -1,9 +1,14 @@
+import json
 from math import log2
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.util import (
     affine_to_projective,
+    field_from_json,
+    field_to_json,
     point_affine_to_bytes,
+    point_projective_from_json,
     point_projective_to_bytes,
+    point_projective_to_json,
     points_affine_to_bytes,
     points_projective_to_bytes,
     get_random_point,
@@ -242,3 +247,34 @@ class SameMSMProof:
         msm_accumulator.accumulate_check(point_lhs, vec_U, vec_x_times_s)
 
         return True, ""
+
+    def to_json(self) -> str:
+        dic = {
+            "B_a": point_projective_to_json(self.B_a),
+            "B_t": point_projective_to_json(self.B_t),
+            "B_u": point_projective_to_json(self.B_u),
+            "vec_L_A": [point_projective_to_json(L_A) for L_A in self.vec_L_A],
+            "vec_L_T": [point_projective_to_json(L_T) for L_T in self.vec_L_T],
+            "vec_L_U": [point_projective_to_json(L_U) for L_U in self.vec_L_U],
+            "vec_R_A": [point_projective_to_json(R_A) for R_A in self.vec_R_A],
+            "vec_R_T": [point_projective_to_json(R_T) for R_T in self.vec_R_T],
+            "vec_R_U": [point_projective_to_json(R_U) for R_U in self.vec_R_U],
+            "x_final": field_to_json(self.x_final),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_SameMSMProof], json_str: str) -> T_SameMSMProof:
+        dic = json.loads(json_str)
+        return cls(
+            B_a=point_projective_from_json(dic["B_a"]),
+            B_t=point_projective_from_json(dic["B_t"]),
+            B_u=point_projective_from_json(dic["B_u"]),
+            vec_L_A=[point_projective_from_json(L_A) for L_A in dic["vec_L_A"]],
+            vec_L_T=[point_projective_from_json(L_T) for L_T in dic["vec_L_T"]],
+            vec_L_U=[point_projective_from_json(L_U) for L_U in dic["vec_L_U"]],
+            vec_R_A=[point_projective_from_json(R_A) for R_A in dic["vec_R_A"]],
+            vec_R_T=[point_projective_from_json(R_T) for R_T in dic["vec_R_T"]],
+            vec_R_U=[point_projective_from_json(R_U) for R_U in dic["vec_R_U"]],
+            x_final=field_from_json(dic["x_final"], Fr),
+        )

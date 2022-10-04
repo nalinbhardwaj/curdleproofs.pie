@@ -1,7 +1,8 @@
+import json
 import random
 
 from curdleproofs.commitment import GroupCommitment
-from curdleproofs.util import points_projective_to_bytes
+from curdleproofs.util import field_from_json, field_to_json, points_projective_to_bytes
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Tuple, Type, TypeVar
 from curdleproofs.util import (
@@ -126,3 +127,24 @@ class SameScalarProof:
             return (True, "")
         else:
             return (False, "Failure")
+
+    def to_json(self) -> str:
+        dic = {
+            "cm_A": self.cm_A.to_json(),
+            "cm_B": self.cm_B.to_json(),
+            "z_k": field_to_json(self.z_k),
+            "z_t": field_to_json(self.z_t),
+            "z_u": field_to_json(self.z_u),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_SameScalarProof], json_str: str) -> T_SameScalarProof:
+        dic = json.loads(json_str)
+        return cls(
+            cm_A=GroupCommitment.from_json(dic["cm_A"]),
+            cm_B=GroupCommitment.from_json(dic["cm_B"]),
+            z_k=field_from_json(dic["z_k"], Fr),
+            z_t=field_from_json(dic["z_t"], Fr),
+            z_u=field_from_json(dic["z_u"], Fr),
+        )

@@ -1,4 +1,5 @@
 from functools import reduce
+import json
 
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.grand_prod import GrandProductProof
@@ -10,6 +11,8 @@ from curdleproofs.util import (
     PointProjective,
     Fr,
     field_to_bytes,
+    point_projective_from_json,
+    point_projective_to_json,
     points_projective_to_bytes,
     get_random_point,
     get_permutation,
@@ -139,3 +142,18 @@ class SamePermutationProof:
             return (False, err)
 
         return (True, "")
+
+    def to_json(self) -> str:
+        dic = {
+            "B": point_projective_to_json(self.B),
+            "grand_prod_proof": self.grand_prod_proof.to_json(),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_SAME_PERM_PROOF], json_str: str) -> T_SAME_PERM_PROOF:
+        dic = json.loads(json_str)
+        return cls(
+            B=point_projective_from_json(dic["B"]),
+            grand_prod_proof=GrandProductProof.from_json(dic["grand_prod_proof"]),
+        )

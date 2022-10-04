@@ -528,3 +528,47 @@ def test_bad_shuffle_argument():
     print("false verify also also also", verify)
     print("err", err)
     assert not verify
+
+
+def test_serde():
+    N = 64
+    ell = N - N_BLINDERS
+
+    crs = CurdleproofsCrs(ell, N_BLINDERS)
+
+    permutation = list(range(ell))
+    random.shuffle(permutation)
+    k = Fr(random.randint(1, Fr.field_modulus))
+
+    vec_R = [normalize(get_random_point()) for _ in range(ell)]
+    vec_S = [normalize(get_random_point()) for _ in range(ell)]
+
+    vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
+        crs, vec_R, vec_S, permutation, k
+    )
+
+    shuffle_proof: CurdleProofsProof = CurdleProofsProof.new(
+        crs=crs,
+        vec_R=vec_R,
+        vec_S=vec_S,
+        vec_T=vec_T,
+        vec_U=vec_U,
+        M=M,
+        permutation=permutation,
+        k=k,
+        vec_m_blinders=vec_m_blinders,
+    )
+
+    print("shuffle proof", shuffle_proof)
+
+    json_str = shuffle_proof.to_json()
+    print("json_str", json_str)
+
+    deser_shuffle_proof = CurdleProofsProof.from_json(json_str)
+
+    # for i in range(50):
+    #   print("iter ", i)
+    verify, err = deser_shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
+    print("verify", verify)
+    print("err", err)
+    assert verify

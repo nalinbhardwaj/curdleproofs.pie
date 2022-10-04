@@ -1,11 +1,20 @@
 from functools import reduce
+import json
 import operator
 import random
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.ipa import IPA, generate_blinders, inner_product
-from curdleproofs.util import invert, point_projective_to_bytes, get_random_point
+from curdleproofs.util import (
+    field_from_json,
+    field_to_json,
+    invert,
+    point_projective_from_json,
+    point_projective_to_bytes,
+    get_random_point,
+    point_projective_to_json,
+)
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import List, Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple, TypeVar, Type
 from curdleproofs.util import (
     PointAffine,
     PointProjective,
@@ -36,7 +45,7 @@ class GrandProductProof:
 
     @classmethod
     def new(
-        cls: type[T_GrandProductProof],
+        cls: Type[T_GrandProductProof],
         crs_G_vec: List[PointProjective],
         crs_H_vec: List[PointProjective],
         crs_U: PointProjective,
@@ -198,3 +207,20 @@ class GrandProductProof:
             return False, err
 
         return True, ""
+
+    def to_json(self) -> str:
+        dic = {
+            "C": point_projective_to_json(self.C),
+            "r_p": field_to_json(self.r_p),
+            "ipa_proof": self.ipa_proof.to_json(),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_GrandProductProof], json_str: str) -> T_GrandProductProof:
+        dic = json.loads(json_str)
+        return cls(
+            C=point_projective_from_json(dic["C"]),
+            r_p=field_from_json(dic["r_p"], Fr),
+            ipa_proof=IPA.from_json(dic["ipa_proof"]),
+        )

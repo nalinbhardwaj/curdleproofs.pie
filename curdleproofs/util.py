@@ -1,5 +1,5 @@
 from random import randint
-from typing import List, TypeVar, Union
+from typing import List, Tuple, Type, TypeVar, Union
 from py_ecc.typing import (
     Optimized_Field,
     Optimized_Point2D,
@@ -90,3 +90,30 @@ def get_permutation(
     vec_a: List[T_GET_PERMUTATION], permutation: Union[List[Fr], List[int]]
 ) -> List[T_GET_PERMUTATION]:
     return [vec_a[int(i)] for i in permutation]
+
+
+def field_to_json(f: FQ_type) -> str:
+    return str(int(f))
+
+
+T_JSON_FIELD = TypeVar("T_JSON_FIELD", Fr, FQ)
+
+
+def field_from_json(s: str, field: Type[T_JSON_FIELD]) -> T_JSON_FIELD:
+    return field(int(s))
+
+
+def point_affine_to_json(p: PointAffine) -> Tuple[str, str]:
+    return (field_to_json(p[0]), field_to_json(p[1]))
+
+
+def point_projective_to_json(p: PointProjective) -> Tuple[str, str]:
+    return point_affine_to_json(normalize(p))
+
+
+def point_affine_from_json(t: Tuple[str, str]) -> PointAffine:
+    return (field_from_json(t[0], FQ), field_from_json(t[1], FQ))
+
+
+def point_projective_from_json(t: Tuple[str, str]) -> PointProjective:
+    return affine_to_projective(point_affine_from_json(t))

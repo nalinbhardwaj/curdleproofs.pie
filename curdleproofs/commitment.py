@@ -1,5 +1,6 @@
+import json
 import random
-from typing import Type, TypeVar
+from typing import Any, Dict, Tuple, Type, TypeVar
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.util import (
     PointAffine,
@@ -7,6 +8,8 @@ from curdleproofs.util import (
     Fr,
     field_to_bytes,
     get_random_point,
+    point_projective_from_json,
+    point_projective_to_json,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
@@ -55,3 +58,18 @@ class GroupCommitment:
         if not isinstance(__o, GroupCommitment):
             return NotImplemented
         return eq(self.T_1, __o.T_1) and eq(self.T_2, __o.T_2)
+
+    def to_json(self) -> str:
+        dic = {
+            "T_1": point_projective_to_json(self.T_1),
+            "T_2": point_projective_to_json(self.T_2),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_GroupCommitment], json_str: str) -> T_GroupCommitment:
+        dic = json.loads(json_str)
+        return cls(
+            T_1=point_projective_from_json(dic["T_1"]),
+            T_2=point_projective_from_json(dic["T_2"]),
+        )
