@@ -3,7 +3,7 @@ from merlin.strobe import Strobe128
 
 
 def test_strobe_conformance():
-    s: Strobe128 = Strobe128(b"Conformance Test Protocol")
+    s: Strobe128 = Strobe128.new(b"Conformance Test Protocol")
 
     msg = int(99).to_bytes(1, "big") * 1024
 

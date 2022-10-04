@@ -1,7 +1,13 @@
 import random
 from typing import Type, TypeVar
 from curdleproofs.crs import CurdleproofsCrs
-from curdleproofs.util import PointAffine, PointProjective, Fr, field_to_bytes, get_random_point
+from curdleproofs.util import (
+    PointAffine,
+    PointProjective,
+    Fr,
+    field_to_bytes,
+    get_random_point,
+)
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,

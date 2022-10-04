@@ -40,7 +40,11 @@ from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
 from curdleproofs.commitment import GroupCommitment
 from curdleproofs.same_scalar import SameScalarProof
-from curdleproofs.curdleproofs import N_BLINDERS, CurdleProofsProof, shuffle_permute_and_commit_input
+from curdleproofs.curdleproofs import (
+    N_BLINDERS,
+    CurdleProofsProof,
+    shuffle_permute_and_commit_input,
+)
 
 
 def test_ipa():

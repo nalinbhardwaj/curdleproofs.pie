@@ -4,7 +4,13 @@ from curdleproofs.commitment import GroupCommitment
 from curdleproofs.util import points_projective_to_bytes
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Tuple, Type, TypeVar
-from curdleproofs.util import PointAffine, PointProjective, Fr, field_to_bytes, get_random_point
+from curdleproofs.util import (
+    PointAffine,
+    PointProjective,
+    Fr,
+    field_to_bytes,
+    get_random_point,
+)
 from curdleproofs.msm_accumulator import MSMAccumulator
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
