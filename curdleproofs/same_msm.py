@@ -1,190 +1,245 @@
 from math import log2
 import random
 from crs import CurdleproofsCrs
-from util import affine_to_projective, point_affine_to_bytes, point_projective_to_bytes, points_affine_to_bytes, points_projective_to_bytes, get_random_point, generate_blinders, get_verification_scalars_bitstring
-from transcript import CurdleproofsTranscript
+from util import (
+    affine_to_projective,
+    point_affine_to_bytes,
+    point_projective_to_bytes,
+    points_affine_to_bytes,
+    points_projective_to_bytes,
+    get_random_point,
+    generate_blinders,
+    get_verification_scalars_bitstring,
+)
+from curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from util import PointAffine, PointProjective, Fr, field_to_bytes, invert
 from msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, neg
+from py_ecc.optimized_bls12_381.optimized_curve import (
+    curve_order,
+    G1,
+    multiply,
+    normalize,
+    add,
+    neg,
+)
 
-T_SameMSMProof = TypeVar('T_SameMSMProof', bound="SameMSMProof")
+T_SameMSMProof = TypeVar("T_SameMSMProof", bound="SameMSMProof")
+
 
 class SameMSMProof:
-  def __init__(self,
-    B_a: PointProjective,
-    B_t: PointProjective,
-    B_u: PointProjective,
+    def __init__(
+        self,
+        B_a: PointProjective,
+        B_t: PointProjective,
+        B_u: PointProjective,
+        vec_L_A: List[PointProjective],
+        vec_L_T: List[PointProjective],
+        vec_L_U: List[PointProjective],
+        vec_R_A: List[PointProjective],
+        vec_R_T: List[PointProjective],
+        vec_R_U: List[PointProjective],
+        x_final: Fr,
+    ) -> None:
+        self.B_a = B_a
+        self.B_t = B_t
+        self.B_u = B_u
+        self.vec_L_A = vec_L_A
+        self.vec_L_T = vec_L_T
+        self.vec_L_U = vec_L_U
+        self.vec_R_A = vec_R_A
+        self.vec_R_T = vec_R_T
+        self.vec_R_U = vec_R_U
+        self.x_final = x_final
 
-    vec_L_A: List[PointProjective],
-    vec_L_T: List[PointProjective],
-    vec_L_U: List[PointProjective],
-    vec_R_A: List[PointProjective],
-    vec_R_T: List[PointProjective],
-    vec_R_U: List[PointProjective],
+    @classmethod
+    def new(
+        cls: Type[T_SameMSMProof],
+        crs_G_vec: List[PointProjective],
+        A: PointProjective,
+        Z_t: PointProjective,
+        Z_u: PointProjective,
+        vec_T: List[PointProjective],
+        vec_U: List[PointProjective],
+        vec_x: List[Fr],
+        transcript: CurdleproofsTranscript,
+    ) -> T_SameMSMProof:
+        n = len(vec_x)
+        lg_n = int(log2(n))
+        assert 2**lg_n == n
 
-    x_final: Fr
-  ) -> None:
-    self.B_a = B_a
-    self.B_t = B_t
-    self.B_u = B_u
-    self.vec_L_A = vec_L_A
-    self.vec_L_T = vec_L_T
-    self.vec_L_U = vec_L_U
-    self.vec_R_A = vec_R_A
-    self.vec_R_T = vec_R_T
-    self.vec_R_U = vec_R_U
-    self.x_final = x_final
-  
-  @classmethod
-  def new(cls,
-    crs_G_vec: List[PointProjective],
+        vec_L_T: List[PointProjective] = []
+        vec_R_T: List[PointProjective] = []
+        vec_L_U: List[PointProjective] = []
+        vec_R_U: List[PointProjective] = []
+        vec_L_A: List[PointProjective] = []
+        vec_R_A: List[PointProjective] = []
 
-    A: PointProjective,
-    Z_t: PointProjective,
-    Z_u: PointProjective,
-    vec_T: List[PointProjective],
-    vec_U: List[PointProjective],
+        vec_r = generate_blinders(n)
 
-    vec_x: List[Fr],
+        B_a = compute_MSM(crs_G_vec, vec_r)
+        B_t = compute_MSM(vec_T, vec_r)
+        B_u = compute_MSM(vec_U, vec_r)
 
-    transcript: CurdleproofsTranscript,
-  ) -> T_SameMSMProof:
-    n = len(vec_x)
-    lg_n = int(log2(n))
-    assert 2**lg_n == n
+        transcript.append_list(
+            b"same_msm_step1", points_projective_to_bytes([A, Z_t, Z_u])
+        )
+        transcript.append_list(
+            b"same_msm_step1", points_projective_to_bytes(vec_T + vec_U)
+        )
+        transcript.append_list(
+            b"same_msm_step1", points_projective_to_bytes([B_a, B_t, B_u])
+        )
+        alpha = transcript.get_and_append_challenge(b"same_msm_alpha")
 
-    vec_L_T: List[PointProjective] = []
-    vec_R_T: List[PointProjective] = []
-    vec_L_U: List[PointProjective] = []
-    vec_R_U: List[PointProjective] = []
-    vec_L_A: List[PointProjective] = []
-    vec_R_A: List[PointProjective] = []
+        for i in range(0, n):
+            vec_x[i] = vec_r[i] + (alpha * vec_x[i])
 
-    vec_r = generate_blinders(n)
+        while len(vec_x) > 1:
+            n //= 2
 
-    B_a = compute_MSM(crs_G_vec, vec_r)
-    B_t = compute_MSM(vec_T, vec_r)
-    B_u = compute_MSM(vec_U, vec_r)
+            x_L, x_R = vec_x[:n], vec_x[n:]
+            T_L, T_R = vec_T[:n], vec_T[n:]
+            U_L, U_R = vec_U[:n], vec_U[n:]
+            G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
 
-    transcript.append_list(b'same_msm_step1', points_projective_to_bytes([A, Z_t, Z_u]))
-    transcript.append_list(b'same_msm_step1', points_projective_to_bytes(vec_T + vec_U))
-    transcript.append_list(b'same_msm_step1', points_projective_to_bytes([B_a, B_t, B_u]))
-    alpha = transcript.get_and_append_challenge(b'same_msm_alpha')
+            L_A = compute_MSM(G_R, x_L)
+            L_T = compute_MSM(T_R, x_L)
+            L_U = compute_MSM(U_R, x_L)
+            R_A = compute_MSM(G_L, x_R)
+            R_T = compute_MSM(T_L, x_R)
+            R_U = compute_MSM(U_L, x_R)
 
-    for i in range(0, n):
-      vec_x[i] = vec_r[i] + (alpha * vec_x[i])
-    
-    while len(vec_x) > 1:
-      n //= 2
+            vec_L_A.append(L_A)
+            vec_L_T.append(L_T)
+            vec_L_U.append(L_U)
+            vec_R_A.append(R_A)
+            vec_R_T.append(R_T)
+            vec_R_U.append(R_U)
 
-      x_L, x_R = vec_x[:n], vec_x[n:]
-      T_L, T_R = vec_T[:n], vec_T[n:]
-      U_L, U_R = vec_U[:n], vec_U[n:]
-      G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
+            transcript.append_list(
+                b"same_msm_loop",
+                points_projective_to_bytes([L_A, L_T, L_U, R_A, R_T, R_U]),
+            )
+            gamma = transcript.get_and_append_challenge(b"same_msm_gamma")
+            gamma_inv = invert(gamma)
 
-      L_A = compute_MSM(G_R, x_L)
-      L_T = compute_MSM(T_R, x_L)
-      L_U = compute_MSM(U_R, x_L)
-      R_A = compute_MSM(G_L, x_R)
-      R_T = compute_MSM(T_L, x_R)
-      R_U = compute_MSM(U_L, x_R)
+            for i in range(0, n):
+                x_L[i] += gamma_inv * x_R[i]
+                T_L[i] = add(T_L[i], multiply(T_R[i], int(gamma)))
+                U_L[i] = add(U_L[i], multiply(U_R[i], int(gamma)))
+                G_L[i] = add(G_L[i], multiply(G_R[i], int(gamma)))
 
-      vec_L_A.append(L_A)
-      vec_L_T.append(L_T)
-      vec_L_U.append(L_U)
-      vec_R_A.append(R_A)
-      vec_R_T.append(R_T)
-      vec_R_U.append(R_U)
+            vec_x = x_L
+            vec_T = T_L
+            vec_U = U_L
+            crs_G_vec = G_L
 
-      transcript.append_list(b'same_msm_loop', points_projective_to_bytes([L_A, L_T, L_U, R_A, R_T, R_U]))
-      gamma = transcript.get_and_append_challenge(b'same_msm_gamma')
-      gamma_inv = invert(gamma)
+        return cls(
+            B_a=B_a,
+            B_t=B_t,
+            B_u=B_u,
+            vec_L_A=vec_L_A,
+            vec_L_T=vec_L_T,
+            vec_L_U=vec_L_U,
+            vec_R_A=vec_R_A,
+            vec_R_T=vec_R_T,
+            vec_R_U=vec_R_U,
+            x_final=vec_x[0],
+        )
 
-      for i in range(0, n):
-        x_L[i] += gamma_inv * x_R[i]
-        T_L[i] = add(T_L[i], multiply(T_R[i], int(gamma)))
-        U_L[i] = add(U_L[i], multiply(U_R[i], int(gamma)))
-        G_L[i] = add(G_L[i], multiply(G_R[i], int(gamma)))
-      
-      vec_x = x_L
-      vec_T = T_L
-      vec_U = U_L
-      crs_G_vec = G_L
+    def verification_scalars(
+        self, n: int, transcript: CurdleproofsTranscript
+    ) -> Tuple[Optional[Tuple[List[Fr], List[Fr], List[Fr]]], str]:
+        lg_n = len(self.vec_L_A)
+        if lg_n >= 32:
+            return None, "lg_n >= 32"
+        if 2**lg_n != n:
+            return None, "2**lg_n != n"
 
-    return cls(
-      B_a=B_a,
-      B_t=B_t,
-      B_u=B_u,
-      vec_L_A=vec_L_A,
-      vec_L_T=vec_L_T,
-      vec_L_U=vec_L_U,
-      vec_R_A=vec_R_A,
-      vec_R_T=vec_R_T,
-      vec_R_U=vec_R_U,
-      x_final=vec_x[0]
-    )
+        bitstring = get_verification_scalars_bitstring(n, lg_n)
 
-  def verification_scalars(self, n: int, transcript: CurdleproofsTranscript) -> Tuple[Optional[Tuple[List[Fr], List[Fr], List[Fr]]], str]:
-    lg_n = len(self.vec_L_A)
-    if lg_n >= 32:
-      return None, 'lg_n >= 32'
-    if 2**lg_n != n:
-      return None, '2**lg_n != n'
-    
-    bitstring = get_verification_scalars_bitstring(n, lg_n)
+        challenges: List[Fr] = []
+        for i in range(0, lg_n):
+            transcript.append_list(
+                b"same_msm_loop",
+                points_projective_to_bytes(
+                    [
+                        self.vec_L_A[i],
+                        self.vec_L_T[i],
+                        self.vec_L_U[i],
+                        self.vec_R_A[i],
+                        self.vec_R_T[i],
+                        self.vec_R_U[i],
+                    ]
+                ),
+            )
+            challenges.append(transcript.get_and_append_challenge(b"same_msm_gamma"))
 
-    challenges: List[Fr] = []
-    for i in range(0, lg_n):
-      transcript.append_list(b'same_msm_loop', points_projective_to_bytes([self.vec_L_A[i], self.vec_L_T[i], self.vec_L_U[i], self.vec_R_A[i], self.vec_R_T[i], self.vec_R_U[i]]))
-      challenges.append(transcript.get_and_append_challenge(b'same_msm_gamma'))
+        challenges_inv = list(map(invert, challenges))
 
-    challenges_inv = list(map(invert, challenges))
+        vec_s: List[Fr] = []
+        for i in range(0, n):
+            vec_s.append(Fr.one())
+            for j in bitstring[i]:
+                vec_s[i] *= challenges[j]
 
-    vec_s: List[Fr] = []
-    for i in range(0, n):
-      vec_s.append(Fr.one())
-      for j in bitstring[i]:
-        vec_s[i] *= challenges[j]
+        return (challenges, challenges_inv, vec_s), ""
 
-    return (challenges, challenges_inv, vec_s), ''
-  
-  def verify(self,
-    crs_G_vec: List[PointProjective],
+    def verify(
+        self,
+        crs_G_vec: List[PointProjective],
+        A: PointProjective,
+        Z_t: PointProjective,
+        Z_u: PointProjective,
+        vec_T: List[PointProjective],
+        vec_U: List[PointProjective],
+        transcript: CurdleproofsTranscript,
+        msm_accumulator: MSMAccumulator,
+    ) -> Tuple[bool, str]:
+        n = len(vec_T)
 
-    A: PointProjective,
-    Z_t: PointProjective,
-    Z_u: PointProjective,
-    vec_T: List[PointProjective],
-    vec_U: List[PointProjective],
-    transcript: CurdleproofsTranscript,
-    msm_accumulator: MSMAccumulator
-  ) -> Tuple[bool, str]:
-    n = len(vec_T)
+        transcript.append_list(
+            b"same_msm_step1", points_projective_to_bytes([A, Z_t, Z_u])
+        )
+        transcript.append_list(
+            b"same_msm_step1", points_projective_to_bytes(vec_T + vec_U)
+        )
+        transcript.append_list(
+            b"same_msm_step1",
+            points_projective_to_bytes([self.B_a, self.B_t, self.B_u]),
+        )
+        alpha = transcript.get_and_append_challenge(b"same_msm_alpha")
 
-    transcript.append_list(b'same_msm_step1', points_projective_to_bytes([A, Z_t, Z_u]))
-    transcript.append_list(b'same_msm_step1', points_projective_to_bytes(vec_T + vec_U))
-    transcript.append_list(b'same_msm_step1', points_projective_to_bytes([self.B_a, self.B_t, self.B_u]))
-    alpha = transcript.get_and_append_challenge(b'same_msm_alpha')
+        (ret, err) = self.verification_scalars(n, transcript)
 
-    ((vec_gamma, vec_gamma_inv, vec_s), err) = self.verification_scalars(n, transcript)
+        if ret is None:
+            return False, err
 
-    if vec_gamma is None:
-      return False, err
-    
-    vec_x_times_s = [self.x_final * s_i for s_i in vec_s]
+        vec_gamma, vec_gamma_inv, vec_s = ret
 
-    A_a = add(self.B_a, multiply(A, int(alpha)))
-    Z_t_a = add(self.B_t, multiply(Z_t, int(alpha)))
-    Z_u_a = add(self.B_u, multiply(Z_u, int(alpha)))
+        vec_x_times_s = [self.x_final * s_i for s_i in vec_s]
 
-    point_lhs = add(add(compute_MSM(self.vec_L_A, vec_gamma), A_a), compute_MSM(self.vec_R_A, vec_gamma_inv))
-    msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_x_times_s)
+        A_a = add(self.B_a, multiply(A, int(alpha)))
+        Z_t_a = add(self.B_t, multiply(Z_t, int(alpha)))
+        Z_u_a = add(self.B_u, multiply(Z_u, int(alpha)))
 
-    point_lhs = add(add(compute_MSM(self.vec_L_T, vec_gamma), Z_t_a), compute_MSM(self.vec_R_T, vec_gamma_inv))
-    msm_accumulator.accumulate_check(point_lhs, vec_T, vec_x_times_s)
+        point_lhs = add(
+            add(compute_MSM(self.vec_L_A, vec_gamma), A_a),
+            compute_MSM(self.vec_R_A, vec_gamma_inv),
+        )
+        msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_x_times_s)
 
-    point_lhs = add(add(compute_MSM(self.vec_L_U, vec_gamma), Z_u_a), compute_MSM(self.vec_R_U, vec_gamma_inv))
-    msm_accumulator.accumulate_check(point_lhs, vec_U, vec_x_times_s)
+        point_lhs = add(
+            add(compute_MSM(self.vec_L_T, vec_gamma), Z_t_a),
+            compute_MSM(self.vec_R_T, vec_gamma_inv),
+        )
+        msm_accumulator.accumulate_check(point_lhs, vec_T, vec_x_times_s)
 
-    return True, ''
+        point_lhs = add(
+            add(compute_MSM(self.vec_L_U, vec_gamma), Z_u_a),
+            compute_MSM(self.vec_R_U, vec_gamma_inv),
+        )
+        msm_accumulator.accumulate_check(point_lhs, vec_U, vec_x_times_s)
+
+        return True, ""

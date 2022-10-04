@@ -1,32 +1,33 @@
 import random
 from util import PointAffine, PointProjective, Fr, affine_to_projective
 from typing import Dict, List, Tuple, Union
-from py_ecc.optimized_bls12_381.optimized_curve import curve_order, G1, multiply, normalize, add, Z1, eq, FQ, is_inf
+from py_ecc.optimized_bls12_381.optimized_curve import (
+    curve_order,
+    G1,
+    multiply,
+    normalize,
+    add,
+    Z1,
+    eq,
+    FQ,
+    is_inf,
+)
 
 
-class SingleMSM:
-  def __init__(self, bases: List[PointProjective], scalars: List[int]) -> None:
-    self.bases = bases
-    self.scalars = scalars
-  
-  def compute(self) -> PointProjective:
-    current = Z1 # zero
-    for (base, scalar) in zip(self.bases, self.scalars):
-      current = add(current, multiply(base, scalar))
+def compute_MSM(
+    bases: List[PointProjective], scalars: Union[List[Fr], List[int]]
+) -> PointProjective:
+    current = Z1  # zero
+    for (base, scalar) in zip(bases, scalars):
+        current = add(current, multiply(base, int(scalar)))  # type: ignore
     return current
-
-def compute_MSM(bases: List[PointProjective], scalars: List[Union[int, Fr]]) -> PointProjective:
-  current = Z1 # zero
-  for (base, scalar) in zip(bases, scalars):
-    current = add(current, multiply(base, int(scalar)))
-  return current
 
 
 # class MSMAccumulatorInefficient:
 #   # TODO: does not accumulate right now
 #   def __init__(self) -> None:
 #     self.MSMs: List[Tuple[SingleMSM, PointProjective]] = []
-  
+
 #   def accumulate_check(self, C: PointProjective, bases: List[PointProjective], scalars: List[int]) -> None:
 #     # print("accumulating", C, bases, scalars)
 #     self.MSMs.append((SingleMSM(bases, scalars), C))
@@ -40,31 +41,40 @@ def compute_MSM(bases: List[PointProjective], scalars: List[Union[int, Fr]]) -> 
 
 
 class MSMAccumulator:
-  def __init__(self) -> None:
-    self.A_c = Z1
-    self.base_scalar_map: Dict[Tuple[int, int], Fr] = {}
+    def __init__(self) -> None:
+        self.A_c = Z1
+        self.base_scalar_map: Dict[Tuple[int, int], Fr] = {}
 
-  def accumulate_check(self,
-    C: PointProjective,
-    bases: List[PointProjective],
-    scalars: List[Union[int, Fr]]
-  ) -> None:
-    random_factor = Fr(random.randint(1, Fr.field_modulus))
+    def accumulate_check(
+        self,
+        C: PointProjective,
+        bases: List[PointProjective],
+        scalars: Union[List[Fr], List[int]],
+    ) -> None:
+        random_factor = Fr(random.randint(1, Fr.field_modulus))
 
-    self.A_c = add(self.A_c, multiply(C, int(random_factor)))
+        self.A_c = add(self.A_c, multiply(C, int(random_factor)))
 
-    for (base, scalar) in zip(bases, scalars):
-      # print("base", base)
-      if is_inf(base):
-        continue
-      base_affine_int = tuple(map(int, normalize(base)))
-      # print("base_affine_int", base_affine_int)
-      if base_affine_int not in self.base_scalar_map:
-        self.base_scalar_map[base_affine_int] = Fr.zero()
-      self.base_scalar_map[base_affine_int] = self.base_scalar_map[base_affine_int] + random_factor * Fr(scalar)
+        for (base, scalar) in zip(bases, scalars):
+            # print("base", base)
+            if is_inf(base):
+                continue
+            base_affine_int_untyped = tuple(map(int, normalize(base)))
+            base_affine_int = (base_affine_int_untyped[0], base_affine_int_untyped[1])
+            # print("base_affine_int", base_affine_int)
+            if base_affine_int not in self.base_scalar_map:
+                self.base_scalar_map[base_affine_int] = Fr.zero()
+            self.base_scalar_map[base_affine_int] = self.base_scalar_map[
+                base_affine_int
+            ] + random_factor * Fr(scalar)
 
-  def verify(self) -> Tuple[bool, str]:
-    bases, scalars = map(list, zip(*self.base_scalar_map.items()))
-    computed = compute_MSM(list(map(lambda t: affine_to_projective((FQ(t[0]), FQ(t[1]))), bases)), list(map(int, scalars)))
-    # print("bases", bases, "scalars", scalars, "computed", normalize(computed), "expected", normalize(self.A_c), "eq", eq(computed, self.A_c))
-    return eq(computed, self.A_c)
+    def verify(self) -> bool:
+        bases: List[Tuple[int, int]]
+        scalars: List[Fr]
+        bases, scalars = map(list, zip(*self.base_scalar_map.items()))  # type: ignore
+        computed = compute_MSM(
+            list(map(lambda t: affine_to_projective((FQ(t[0]), FQ(t[1]))), bases)),
+            list(map(int, scalars)),
+        )
+        # print("bases", bases, "scalars", scalars, "computed", normalize(computed), "expected", normalize(self.A_c), "eq", eq(computed, self.A_c))
+        return eq(computed, self.A_c)
