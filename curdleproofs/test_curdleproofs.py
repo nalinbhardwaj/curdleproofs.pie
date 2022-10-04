@@ -18,7 +18,7 @@ from same_scalar import SameScalarProof
 from curdleproofs import N_BLINDERS, CurdleProofsProof, shuffle_permute_and_commit_input
 
 def test_ipa():
-  transcript = CurdleproofsTranscript()
+  transcript = CurdleproofsTranscript(b'curdleproofs')
 
   n = 128
 
@@ -51,7 +51,7 @@ def test_ipa():
   print("proof: ", proof, proof.vec_L_C, proof.vec_L_D, proof.vec_R_C, proof.vec_R_D, "crs len", len(crs_G_vec))
   print("err: ", err)
 
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator = MSMAccumulator()
 
   (result, err) = proof.verify(crs_G_vec = crs_G_vec,
@@ -70,7 +70,7 @@ def test_ipa():
   print("err: ", err)
   assert (result and msm_verify)
 
-  transcript_wrong = CurdleproofsTranscript()
+  transcript_wrong = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator_wrong = MSMAccumulator()
   (result_wrong, err_wrong) =  proof.verify(crs_G_vec = crs_G_vec,
     crs_H = crs_H,
@@ -88,7 +88,7 @@ def test_ipa():
   assert not (result_wrong and msm_wrong_verify)
 
 def test_gprod():
-  transcript_prover = CurdleproofsTranscript()
+  transcript_prover = CurdleproofsTranscript(b'curdleproofs')
   
   n = 128
   n_blinders = 4
@@ -121,7 +121,7 @@ def test_gprod():
   print("Prover result: ", gprod_proof)
   print("Prover error:", err)
 
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator = MSMAccumulator()
 
   (result, err) = gprod_proof.verify(
@@ -145,7 +145,7 @@ def test_gprod():
   assert (result and msm_verify)
 
   # Wrong test
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator = MSMAccumulator()
   (result, err) = gprod_proof.verify(
     crs_G_vec=crs_G_vec,
@@ -168,7 +168,7 @@ def test_gprod():
   assert not (result and msm_verify)
 
   # Wrong test
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator = MSMAccumulator()
   (result, err) = gprod_proof.verify(
     crs_G_vec=crs_G_vec,
@@ -191,7 +191,7 @@ def test_gprod():
   assert not (result and msm_verify)
 
 def test_same_permutation_proof():
-  transcript_prover = CurdleproofsTranscript()
+  transcript_prover = CurdleproofsTranscript(b'curdleproofs')
 
   n = 128
   n_blinders = 4
@@ -232,7 +232,7 @@ def test_same_permutation_proof():
   print("Proof: ", same_perm_proof)
   print("Error: ", err)
 
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator = MSMAccumulator()
 
   (verify, err) = same_perm_proof.verify(
@@ -257,7 +257,7 @@ def test_same_permutation_proof():
   assert (verify and msm_verify)
 
 def test_same_msm():
-  transcript_prover = CurdleproofsTranscript()
+  transcript_prover = CurdleproofsTranscript(b'curdleproofs')
   n = 128
 
   crs_G_vec = [get_random_point() for _ in range(0, n)]
@@ -283,7 +283,7 @@ def test_same_msm():
 
   print("Proof", proof)
 
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   msm_accumulator = MSMAccumulator()
 
   (result, err) = proof.verify(
@@ -305,7 +305,7 @@ def test_same_msm():
 
 
 def test_same_scalar_arg():
-  transcript_prover = CurdleproofsTranscript()
+  transcript_prover = CurdleproofsTranscript(b'curdleproofs')
 
   crs_G_t = get_random_point()
   crs_G_u = get_random_point()
@@ -337,7 +337,7 @@ def test_same_scalar_arg():
 
   print("proof", proof)
 
-  transcript_verifier = CurdleproofsTranscript()
+  transcript_verifier = CurdleproofsTranscript(b'curdleproofs')
   (res, err) = proof.verify(
     crs_G_t=crs_G_t,
     crs_G_u=crs_G_u,

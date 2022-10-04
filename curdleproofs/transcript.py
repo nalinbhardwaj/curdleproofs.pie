@@ -1,34 +1,29 @@
 from typing import List
 from py_ecc.secp256k1.secp256k1 import bytes_to_int
 from py_ecc.optimized_bls12_381.optimized_curve import curve_order
+from merlin.transcript import MerlinTranscript
 
 from util import Fr
 
-class CurdleproofsTranscript:
-  def __init__(self) -> None:
-    self.transcript: List[int] = []
-
+class CurdleproofsTranscript(MerlinTranscript):
   def append(self, label: bytes, item: bytes) -> None:
-    self.transcript.append(label)
-    self.transcript.append(item)
+    self.append_message(label, item)
   
   def append_list(self, label: bytes, items: List[bytes]) -> None:
-    self.transcript.append(label)
     for item in items:
-      self.transcript.append(item)
+      self.append_message(label, item)
 
   def get_and_append_challenge(self, label: bytes) -> Fr:
-    # TODO: implement STROBE?
-    self.transcript.append(label)
-    buf = b''
-    for i in range(0, 64):
-      buf += bytes([i])
-    return Fr(bytes_to_int(buf))
-    # return Fr.one()
+    while True:
+      challenge_bytes = self.challenge_bytes(label, 255)
+      f = Fr(bytes_to_int(challenge_bytes))
+      if f != Fr.zero():
+        self.append(label, challenge_bytes)
+        return f
 
   def get_and_append_challenges(self, label: bytes, n: int) -> List[Fr]:
-    return [self.get_and_append_challenge(label) for i in range(0, n)]
+    return [self.get_and_append_challenge(label) for _ in range(0, n)]
 
-# transcript = CurdleproofsTranscript()
+# transcript = CurdleproofsTranscript(b'curdleproofs')
 # transcript.append(b'hello', b'world')
 # print(transcript.get_and_append_challenge(b'challenge'))

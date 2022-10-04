@@ -136,8 +136,8 @@ class GrandProductProof:
     alpha = transcript.get_and_append_challenge(b'gprod_alpha')
 
     # Step 2
-    transcript.append(b'gprod_step1', point_projective_to_bytes(self.C))
-    transcript.append(b'gprod_step1', field_to_bytes(self.r_p))
+    transcript.append(b'gprod_step2', point_projective_to_bytes(self.C))
+    transcript.append(b'gprod_step2', field_to_bytes(self.r_p))
     beta = transcript.get_and_append_challenge(b"gprod_beta");
     beta_inv = invert(beta)
 

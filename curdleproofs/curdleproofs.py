@@ -52,7 +52,7 @@ class CurdleProofsProof:
   ) -> T_CurdleProofsProof:
     ell = len(vec_R)
 
-    transcript = CurdleproofsTranscript()
+    transcript = CurdleproofsTranscript(b'curdleproofs')
 
     transcript.append_list(b'curdleproofs_step1', points_affine_to_bytes(vec_R + vec_S + vec_T + vec_U))
     transcript.append(b'curdleproofs_step1', point_projective_to_bytes(M))
@@ -145,7 +145,7 @@ class CurdleProofsProof:
   ) -> Tuple[bool, str]:
     ell = len(vec_R)
 
-    transcript = CurdleproofsTranscript()
+    transcript = CurdleproofsTranscript(b'curdleproofs')
     msm_accumulator = MSMAccumulator()
 
     if is_inf(vec_T[0]):

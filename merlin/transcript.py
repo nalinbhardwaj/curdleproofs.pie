@@ -1,4 +1,4 @@
-from strobe import Strobe128
+from merlin.strobe import Strobe128
 
 MERLIN_PROTOCOL_LABEL = b"Merlin v1.0"
 

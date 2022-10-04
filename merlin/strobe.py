@@ -1,5 +1,5 @@
 from typing import TypeVar
-from keccak import KeccakF1600
+from merlin.keccak import KeccakF1600
 
 STROBE_R = 166
 
