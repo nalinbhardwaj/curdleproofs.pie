@@ -3,7 +3,7 @@ import json
 import operator
 import random
 from curdleproofs.crs import CurdleproofsCrs
-from curdleproofs.ipa import IPA, generate_blinders, inner_product
+from curdleproofs.ipa import IPA
 from curdleproofs.util import (
     field_from_json,
     field_to_json,
@@ -42,105 +42,6 @@ class GrandProductProof:
         self.C = C
         self.r_p = r_p
         self.ipa_proof = ipa_proof
-
-    @classmethod
-    def new(
-        cls: Type[T_GrandProductProof],
-        crs_G_vec: List[PointProjective],
-        crs_H_vec: List[PointProjective],
-        crs_U: PointProjective,
-        B: PointProjective,
-        gprod_result: Fr,
-        vec_b: List[Fr],
-        vec_b_blinders: List[Fr],
-        transcript: CurdleproofsTranscript,
-    ) -> Tuple[Optional[T_GrandProductProof], Optional[str]]:
-        n_blinders = len(vec_b_blinders)
-        ell = len(crs_G_vec)
-        n = ell + n_blinders
-
-        transcript.append(b"gprod_step1", point_projective_to_bytes(B))
-        transcript.append(b"gprod_step1", field_to_bytes(gprod_result))
-        alpha = transcript.get_and_append_challenge(b"gprod_alpha")
-
-        # Step 2
-        vec_c = [Fr.one()]
-        for i in range(0, ell - 1):
-            vec_c.append(vec_c[i] * vec_b[i])
-
-        vec_c_blinders = generate_blinders(n_blinders)
-        C = add(compute_MSM(crs_G_vec, vec_c), compute_MSM(crs_H_vec, vec_c_blinders))
-
-        vec_r_b_plus_alpha = [r_b_i + alpha for r_b_i in vec_b_blinders]
-        r_p = inner_product(vec_r_b_plus_alpha, vec_c_blinders)
-
-        transcript.append(b"gprod_step2", point_projective_to_bytes(C))
-        transcript.append(b"gprod_step2", field_to_bytes(r_p))
-        beta = transcript.get_and_append_challenge(b"gprod_beta")
-        beta_inv = invert(beta)
-
-        pow_beta_inv = beta_inv
-        vec_G_prime: List[PointProjective] = []
-        for G_i in crs_G_vec:
-            G_prime = multiply(G_i, int(pow_beta_inv))
-            vec_G_prime.append(G_prime)
-            pow_beta_inv *= beta_inv
-
-        vec_H_prime = [multiply(H_i, int(beta_inv ** (ell + 1))) for H_i in crs_H_vec]
-
-        vec_b_prime: List[Fr] = []
-        pow_beta = beta
-        for b_i in vec_b:
-            vec_b_prime.append(b_i * pow_beta)
-            pow_beta *= beta
-
-        vec_d: List[Fr] = []
-        pow_beta = Fr.one()
-        vec_beta_powers: List[Fr] = []
-        for b_prime_i in vec_b_prime:
-            vec_d.append(b_prime_i - pow_beta)
-            vec_beta_powers.append(pow_beta)
-            pow_beta *= beta
-
-        vec_d_blinders = [(beta ** (ell + 1)) * r_b_i for r_b_i in vec_r_b_plus_alpha]
-
-        vec_alphabeta = [alpha * (beta ** (ell + 1)) for _ in range(n_blinders)]
-        D = add(
-            add(B, neg(compute_MSM(vec_G_prime, vec_beta_powers))),
-            compute_MSM(vec_H_prime, vec_alphabeta),
-        )
-
-        vec_G = crs_G_vec + crs_H_vec
-        vec_G_prime += vec_H_prime
-
-        inner_prod = r_p * (beta ** (ell + 1)) + gprod_result * (beta**ell) - Fr.one()
-
-        vec_c += vec_c_blinders
-        vec_d += vec_d_blinders
-
-        # print("inner_prod", inner_prod)
-        # print("computed", inner_product(vec_c, vec_d))
-
-        assert inner_product(vec_c, vec_d) == inner_prod
-        assert eq(compute_MSM(vec_G, vec_c), C)
-        assert eq(compute_MSM(vec_G_prime, vec_d), D)
-
-        (ipa_proof, err) = IPA.new(
-            crs_G_vec=vec_G,
-            crs_G_prime_vec=vec_G_prime,
-            crs_H=crs_U,
-            C=C,
-            D=D,
-            z=inner_prod,
-            vec_c=vec_c,
-            vec_d=vec_d,
-            transcript=transcript,
-        )
-
-        if ipa_proof is None:
-            return None, err
-
-        return cls(C, r_p, ipa_proof), None
 
     def verify(
         self,
@@ -207,14 +108,6 @@ class GrandProductProof:
             return False, err
 
         return True, ""
-
-    def to_json(self) -> str:
-        dic = {
-            "C": point_projective_to_json(self.C),
-            "r_p": field_to_json(self.r_p),
-            "ipa_proof": self.ipa_proof.to_json(),
-        }
-        return json.dumps(dic)
 
     @classmethod
     def from_json(cls: Type[T_GrandProductProof], json_str: str) -> T_GrandProductProof:

@@ -36,53 +36,6 @@ class SameScalarProof:
         self.z_t = z_t
         self.z_u = z_u
 
-    @classmethod
-    def new(
-        cls: Type[T_SameScalarProof],
-        crs_G_t: PointProjective,
-        crs_G_u: PointProjective,
-        crs_H: PointProjective,
-        R: PointProjective,
-        S: PointProjective,
-        cm_T: GroupCommitment,
-        cm_U: GroupCommitment,
-        k: Fr,
-        r_t: Fr,
-        r_u: Fr,
-        transcript: CurdleproofsTranscript,
-    ) -> T_SameScalarProof:
-        r_a = Fr(random.randint(1, Fr.field_modulus))
-        r_b = Fr(random.randint(1, Fr.field_modulus))
-        r_k = Fr(random.randint(1, Fr.field_modulus))
-
-        cm_A = GroupCommitment.new(crs_G_t, crs_H, multiply(R, int(r_k)), r_a)
-        cm_B = GroupCommitment.new(crs_G_u, crs_H, multiply(S, int(r_k)), r_b)
-
-        transcript.append_list(
-            b"sameexp_points",
-            points_projective_to_bytes(
-                [
-                    R,
-                    S,
-                    cm_T.T_1,
-                    cm_T.T_2,
-                    cm_U.T_1,
-                    cm_U.T_2,
-                    cm_A.T_1,
-                    cm_A.T_2,
-                    cm_B.T_1,
-                    cm_B.T_2,
-                ]
-            ),
-        )
-        alpha = transcript.get_and_append_challenge(b"same_scalar_alpha")
-
-        z_k = r_k + k * alpha
-        z_t = r_a + r_t * alpha
-        z_u = r_b + r_u * alpha
-
-        return cls(cm_A, cm_B, z_k, z_t, z_u)
-
     def verify(
         self,
         crs_G_t: PointProjective,
@@ -127,16 +80,6 @@ class SameScalarProof:
             return (True, "")
         else:
             return (False, "Failure")
-
-    def to_json(self) -> str:
-        dic = {
-            "cm_A": self.cm_A.to_json(),
-            "cm_B": self.cm_B.to_json(),
-            "z_k": field_to_json(self.z_k),
-            "z_t": field_to_json(self.z_t),
-            "z_u": field_to_json(self.z_u),
-        }
-        return json.dumps(dic)
 
     @classmethod
     def from_json(cls: Type[T_SameScalarProof], json_str: str) -> T_SameScalarProof:

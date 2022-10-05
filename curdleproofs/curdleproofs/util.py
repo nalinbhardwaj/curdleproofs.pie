@@ -74,10 +74,6 @@ def get_verification_scalars_bitstring(n: int, lg_n: int) -> List[List[int]]:
     return bitstrings
 
 
-def generate_blinders(n: int) -> List[Fr]:
-    return [Fr(randint(0, Fr.field_modulus)) for _ in range(0, n)]
-
-
 def inner_product(a: List[Fr], b: List[Fr]) -> Fr:
     assert len(a) == len(b)
     return sum([a[i] * b[i] for i in range(0, len(a))], Fr.zero())
