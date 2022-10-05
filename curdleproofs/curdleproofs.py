@@ -5,7 +5,9 @@ from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.ipa import generate_blinders
 from curdleproofs.util import (
     affine_to_projective,
+    point_affine_from_json,
     point_affine_to_bytes,
+    point_affine_to_json,
     point_projective_from_json,
     point_projective_to_bytes,
     point_projective_to_json,
@@ -326,3 +328,43 @@ def shuffle_permute_and_commit_input(
     M = add(compute_MSM(crs.vec_G, sigma_ell), compute_MSM(crs.vec_H, vec_m_blinders))
 
     return vec_T, vec_U, M, vec_m_blinders
+
+
+T_VerifierInput = TypeVar("T_VerifierInput", bound="VerifierInput")
+
+
+class VerifierInput:
+    def __init__(
+        self,
+        vec_R: List[PointAffine],
+        vec_S: List[PointAffine],
+        vec_T: List[PointAffine],
+        vec_U: List[PointAffine],
+        M: PointProjective,
+    ) -> None:
+        self.vec_R = vec_R
+        self.vec_S = vec_S
+        self.vec_T = vec_T
+        self.vec_U = vec_U
+        self.M = M
+
+    def to_json(self) -> str:
+        dic = {
+            "vec_R": [point_affine_to_json(R) for R in self.vec_R],
+            "vec_S": [point_affine_to_json(S) for S in self.vec_S],
+            "vec_T": [point_affine_to_json(T) for T in self.vec_T],
+            "vec_U": [point_affine_to_json(U) for U in self.vec_U],
+            "M": point_projective_to_json(self.M),
+        }
+        return json.dumps(dic)
+
+    @classmethod
+    def from_json(cls: Type[T_VerifierInput], json_str: str) -> T_VerifierInput:
+        dic = json.loads(json_str)
+        return cls(
+            vec_R=[point_affine_from_json(R) for R in dic["vec_R"]],
+            vec_S=[point_affine_from_json(S) for S in dic["vec_S"]],
+            vec_T=[point_affine_from_json(T) for T in dic["vec_T"]],
+            vec_U=[point_affine_from_json(U) for U in dic["vec_U"]],
+            M=point_projective_from_json(dic["M"]),
+        )

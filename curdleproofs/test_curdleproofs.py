@@ -43,6 +43,7 @@ from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.curdleproofs import (
     N_BLINDERS,
     CurdleProofsProof,
+    VerifierInput,
     shuffle_permute_and_commit_input,
 )
 
@@ -421,7 +422,7 @@ def test_shuffle_argument():
     N = 64
     ell = N - N_BLINDERS
 
-    crs = CurdleproofsCrs(ell, N_BLINDERS)
+    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
 
     permutation = list(range(ell))
     random.shuffle(permutation)
@@ -460,7 +461,7 @@ def test_bad_shuffle_argument():
     N = 128
     ell = N - N_BLINDERS
 
-    crs = CurdleproofsCrs(ell, N_BLINDERS)
+    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
 
     permutation = list(range(ell))
     random.shuffle(permutation)
@@ -534,7 +535,7 @@ def test_serde():
     N = 64
     ell = N - N_BLINDERS
 
-    crs = CurdleproofsCrs(ell, N_BLINDERS)
+    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
 
     permutation = list(range(ell))
     random.shuffle(permutation)
@@ -561,14 +562,36 @@ def test_serde():
 
     print("shuffle proof", shuffle_proof)
 
-    json_str = shuffle_proof.to_json()
-    print("json_str", json_str)
+    json_str_proof = shuffle_proof.to_json()
+    print("json_str_proof", json_str_proof)
 
-    deser_shuffle_proof = CurdleProofsProof.from_json(json_str)
+    json_str_crs = crs.to_json()
+    print("json_str_crs", json_str_crs)
+
+    verifier_input = VerifierInput(
+        vec_R=vec_R,
+        vec_S=vec_S,
+        vec_T=vec_T,
+        vec_U=vec_U,
+        M=M,
+    )
+
+    json_str_verifier_input = verifier_input.to_json()
+
+    deser_shuffle_proof = CurdleProofsProof.from_json(json_str_proof)
+    deser_crs = CurdleproofsCrs.from_json(json_str_crs)
+    deser_verifier_input = VerifierInput.from_json(json_str_verifier_input)
 
     # for i in range(50):
     #   print("iter ", i)
-    verify, err = deser_shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
+    verify, err = deser_shuffle_proof.verify(
+        deser_crs,
+        deser_verifier_input.vec_R,
+        deser_verifier_input.vec_S,
+        deser_verifier_input.vec_T,
+        deser_verifier_input.vec_U,
+        deser_verifier_input.M,
+    )
     print("verify", verify)
     print("err", err)
     assert verify
