@@ -1,9 +1,11 @@
-# curdleproofs.pie
+# curdleproofpie: verifier only
 
-curdleproofs.pie is a Python implementation of the [curdleproofs protocol](https://github.com/asn-d6/curdleproofs) from the Ethereum Foundation Cryptography Research team.
+curdleproofpie is a Python equivalent to [curdleproofs](https://github.com/asn-d6/curdleproofs) original implementation along with a python Merlin transcript implementation.
 
-The implementation is at feature parity with the original implementation and passes all the tests provided there.
+All tests pass for equivalency to the original curdleproofs Rust implementation as well as Merlin transcript conformance to Strobe.
 
-Additionally, curdleproofs.pie contains a self-contained package implementing [Merlin Transcripts](https://merlin.cool) (along with the required subset of the STROBE framework) in Python. This is also tested for equivalence to the [Rust implementation](https://crates.io/crates/merlin) using the provided tests in that repository.
+This is a branch where the prover code is stripped and all that is left is serde and verification code. This code is relevant to consensus clients for verifying and replicating in clients.
 
-If you are only interested in the curdleproofs verifier implementation (for instance, if you are implementing it in a ETH consensus client), please checkout the [`verifier-only`](https://github.com/nalinbhardwaj/curdleproofs.pie/tree/verifier-only) branch of this repository.
+See an example of the verifier usage in [`test_curdleproofs.py`](https://github.com/nalinbhardwaj/curdleproofpie/blob/verifier-only/curdleproofs/test_curdleproofs.py).
+
+Note that the [master branch](https://github.com/nalinbhardwaj/curdleproofpie) additionally provides a prover implementation compatible with this verifier.
