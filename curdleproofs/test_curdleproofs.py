@@ -4,6 +4,7 @@ import operator
 import random
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.grand_prod import GrandProductProof
+from curdleproofs.opening import TrackerOpeningProof
 from curdleproofs.util import (
     affine_to_projective,
     point_affine_to_bytes,
@@ -595,3 +596,26 @@ def test_serde():
     print("verify", verify)
     print("err", err)
     assert verify
+
+
+def test_tracker_opening_proof():
+    G = G1
+    k = generate_blinders(1)[0]
+    r = generate_blinders(1)[0]
+
+    k_G = multiply(G, int(k))
+    r_G = multiply(G, int(r))
+    k_r_G = multiply(r_G, int(k))
+
+    transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
+    opening_proof = TrackerOpeningProof.new(
+        k_r_G=k_r_G, r_G=r_G, k_G=k_G, G=G, k=k, transcript=transcript_prover
+    )
+
+    json_str_proof = opening_proof.to_json()
+    print("json_str_proof", json_str_proof)
+
+    deser_proof = TrackerOpeningProof.from_json(json_str_proof)
+
+    transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
+    assert deser_proof.verify(transcript_verifier)
