@@ -7,7 +7,6 @@ from curdleproofs.util import (
     PointProjective,
     field_from_json,
     field_to_json,
-    generate_blinders,
     point_projective_from_json,
     point_projective_to_bytes,
     point_projective_to_json,
@@ -45,32 +44,6 @@ class TrackerOpeningProof:
         self.B = B
         self.s = s
 
-    @classmethod
-    def new(
-        cls: Type[T_TrackerOpeningProof],
-        k_r_G: PointProjective,
-        r_G: PointProjective,
-        k_G: PointProjective,
-        G: PointProjective,
-        k: Fr,
-        transcript: CurdleproofsTranscript,
-    ) -> T_TrackerOpeningProof:
-        blinder = generate_blinders(1)[0]
-        A = multiply(G, int(blinder))
-        B = multiply(r_G, int(blinder))
-
-        transcript.append_list(
-            b"tracker_opening_proof",
-            points_projective_to_bytes([k_G, G, k_r_G, r_G, A, B]),
-        )
-
-        challenge = transcript.get_and_append_challenge(
-            b"tracker_opening_proof_challenge"
-        )
-        s = blinder - challenge * k
-
-        return cls(k_r_G, r_G, k_G, G, A, B, s)
-
     def verify(
         self,
         transcript: CurdleproofsTranscript,
@@ -91,19 +64,6 @@ class TrackerOpeningProof:
         )
 
         return eq(Aprime, self.A) and eq(Bprime, self.B)
-
-    def to_json(self) -> str:
-        return json.dumps(
-            {
-                "k_r_G": point_projective_to_json(self.k_r_G),
-                "r_G": point_projective_to_json(self.r_G),
-                "k_G": point_projective_to_json(self.k_G),
-                "G": point_projective_to_json(self.G),
-                "A": point_projective_to_json(self.A),
-                "B": point_projective_to_json(self.B),
-                "s": field_to_json(self.s),
-            }
-        )
 
     @classmethod
     def from_json(

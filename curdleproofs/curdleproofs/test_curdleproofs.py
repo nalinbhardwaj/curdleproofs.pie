@@ -4,6 +4,9 @@ from curdleproofs.curdleproofs import (
     CurdleProofsProof,
     VerifierInput,
 )
+from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
+from curdleproofs.opening import TrackerOpeningProof
+from py_ecc.optimized_bls12_381.optimized_curve import G1
 
 
 def test_verifier():
@@ -36,21 +39,9 @@ def test_verifier():
 
 def test_tracker_opening_proof():
     G = G1
-    k = generate_blinders(1)[0]
-    r = generate_blinders(1)[0]
-
-    k_G = multiply(G, int(k))
-    r_G = multiply(G, int(r))
-    k_r_G = multiply(r_G, int(k))
-
-    transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
-    opening_proof = TrackerOpeningProof.new(
-        k_r_G=k_r_G, r_G=r_G, k_G=k_G, G=G, k=k, transcript=transcript_prover
-    )
-
-    json_str_proof = opening_proof.to_json()
-    print("json_str_proof", json_str_proof)
-
+    # Read fixture json
+    with open("curdleproofs/fixtures/tracker_opening_proof.json") as f:
+        json_str_proof = f.read()
     deser_proof = TrackerOpeningProof.from_json(json_str_proof)
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
