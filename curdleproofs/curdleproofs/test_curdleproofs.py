@@ -11,11 +11,11 @@ from py_ecc.optimized_bls12_381.optimized_curve import G1
 
 def test_verifier():
     # Read fixture json
-    with open("curdleproofs/fixtures/proof.json") as f:
+    with open("fixtures/proof.json") as f:
         json_str_proof = f.read()
-    with open("curdleproofs/fixtures/crs.json") as f:
+    with open("fixtures/crs.json") as f:
         json_str_crs = f.read()
-    with open("curdleproofs/fixtures/verifier_input.json") as f:
+    with open("fixtures/verifier_input.json") as f:
         json_str_verifier_input = f.read()
 
     deser_shuffle_proof = CurdleProofsProof.from_json(json_str_proof)
@@ -40,7 +40,7 @@ def test_verifier():
 def test_tracker_opening_proof():
     G = G1
     # Read fixture json
-    with open("curdleproofs/fixtures/tracker_opening_proof.json") as f:
+    with open("fixtures/tracker_opening_proof.json") as f:
         json_str_proof = f.read()
     deser_proof = TrackerOpeningProof.from_json(json_str_proof)
 

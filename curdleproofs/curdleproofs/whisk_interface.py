@@ -24,7 +24,9 @@ def IsValidWhiskShuffleProof(
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
     """
-    crs = CurdleproofsCrs.new(len(pre_shuffle_trackers), N_BLINDERS)
+    with open("fixtures/crs.json") as f:
+        json_str_crs = f.read()
+    crs = CurdleproofsCrs.from_json(json_str_crs)
     vec_R = [pre_shuffle_tracker.r_G for pre_shuffle_tracker in pre_shuffle_trackers]
     vec_S = [pre_shuffle_tracker.k_r_G for pre_shuffle_tracker in pre_shuffle_trackers]
 
