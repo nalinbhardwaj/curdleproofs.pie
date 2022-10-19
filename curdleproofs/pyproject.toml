@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 py-ecc = "^6.0.0"
-merlin = { path = "../merlin/" }
+merlin = {git = "https://github.com/nalinbhardwaj/curdleproofs.pie", rev = "master", subdirectory = "merlin"}
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.982"

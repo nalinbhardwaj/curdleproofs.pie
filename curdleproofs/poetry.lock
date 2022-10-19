@@ -143,8 +143,11 @@ python-versions = "^3.9"
 develop = false
 
 [package.source]
-type = "directory"
-url = "../merlin"
+type = "git"
+url = "https://github.com/nalinbhardwaj/curdleproofs.pie"
+reference = "master"
+resolved_reference = "6b8be1b1ee61f76bb88caf45f40c907f16cf16df"
+subdirectory = "merlin"
 
 [[package]]
 name = "mypy"
@@ -300,7 +303,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "59bc6dcec18ae014c6c9ebf8ed0e5c25a9110782e1a8f17d5402bb772ed1d8e1"
+content-hash = "0cf1e5d25791ae5396e0623f628c8aca32229455159710590da5dda11265db5b"
 
 [metadata.files]
 attrs = [
