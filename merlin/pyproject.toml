@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "merlin"
+version = "0.1.0"
+description = "merlin is a Python implementation of Merlin transcripts (https://merlin.cool)"
+authors = ["Nalin Bhardwaj <nalinbhardwaj@nibnalin.me>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.3"
+mypy = "^0.982"
+black = "^22.10.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
