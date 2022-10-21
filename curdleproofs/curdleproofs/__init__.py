@@ -1,1 +1,1 @@
-from .whisk_interface import IsValidWhiskShuffleProof, IsValidWhiskOpeningProof
+from .whisk_interface import IsValidWhiskShuffleProof, IsValidWhiskOpeningProof, SerializedCurdleProofsProof, SerializedWhiskTrackerProof
