@@ -12,7 +12,7 @@ class WhiskTracker(Container):
     k_r_G: BLSG1Point  # k * r * G
 
 
-SerializedCurdleProofsProof = str
+SerializedCurdleProofsProof = bytes
 
 
 def IsValidWhiskShuffleProof(
@@ -33,14 +33,14 @@ def IsValidWhiskShuffleProof(
         post_shuffle_tracker.k_r_G for post_shuffle_tracker in post_shuffle_trackers
     ]
 
-    shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof)
+    shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof.decode())
 
     M_projective = affine_to_projective(M)
 
     return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M_projective)
 
 
-SerializedWhiskTrackerProof = str
+SerializedWhiskTrackerProof = bytes
 
 
 def IsValidWhiskOpeningProof(
@@ -51,7 +51,7 @@ def IsValidWhiskOpeningProof(
     """
     Verify knowledge of `k` such that `tracker.k_r_G == k * tracker.r_G` and `k_commitment == k * BLS_G1_GENERATOR`.
     """
-    tracker_proof_instance = TrackerOpeningProof.from_json(tracker_proof)
+    tracker_proof_instance = TrackerOpeningProof.from_json(tracker_proof.decode())
 
     if not tracker_proof_instance.G == G1:
         return False
