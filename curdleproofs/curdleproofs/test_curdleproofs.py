@@ -50,7 +50,9 @@ from curdleproofs.curdleproofs import (
 from curdleproofs.whisk_interface import (
     WhiskTracker,
     GenerateWhiskTrackerProof,
+    GenerateWhiskShuffleProof,
     IsValidWhiskOpeningProof,
+    IsValidWhiskShuffleProof,
 )
 
 
@@ -636,6 +638,15 @@ def test_whisk_interface_tracker_opening_proof():
     assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
 
 
+def test_whisk_interface_shuffle_proof():
+    N = 64
+    ell = N - N_BLINDERS
+    crs = generate_random_crs(ell)
+    pre_trackers = generate_random_trackers(ell)
+    shuffle_proof, post_trackers = GenerateWhiskShuffleProof(crs, pre_trackers)
+    assert IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, shuffle_proof)
+
+
 def generate_random_k() -> Fr:
     return generate_blinders(1)[0]
 
@@ -649,3 +660,11 @@ def generate_tracker(k: Fr) -> WhiskTracker:
     r_G = multiply(G1, int(r))
     k_r_G = multiply(r_G, int(k))
     return WhiskTracker(normalize(r_G), normalize(k_r_G))
+
+
+def generate_random_crs(ell: int) -> CurdleproofsCrs:
+    return CurdleproofsCrs.new(ell, N_BLINDERS)
+
+
+def generate_random_trackers(n: int) -> List[WhiskTracker]:
+    return [generate_tracker(generate_random_k()) for _ in range(n)]

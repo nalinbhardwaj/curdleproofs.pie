@@ -50,6 +50,7 @@ T_CurdleProofsProof = TypeVar("T_CurdleProofsProof", bound="CurdleProofsProof")
 class CurdleProofsProof:
     def __init__(
         self,
+        M: PointProjective,
         A: PointProjective,
         cm_T: GroupCommitment,
         cm_U: GroupCommitment,
@@ -59,6 +60,7 @@ class CurdleProofsProof:
         same_scalar_proof: SameScalarProof,
         same_msm_proof: SameMSMProof,
     ) -> None:
+        self.M = M
         self.A = A
         self.cm_T = cm_T
         self.cm_U = cm_U
@@ -176,6 +178,7 @@ class CurdleProofsProof:
         )
 
         return cls(
+            M=M,
             A=A,
             cm_T=cm_T,
             cm_U=cm_U,
@@ -193,7 +196,6 @@ class CurdleProofsProof:
         vec_S: List[PointAffine],
         vec_T: List[PointAffine],
         vec_U: List[PointAffine],
-        M: PointProjective,
     ) -> Tuple[bool, str]:
         ell = len(vec_R)
 
@@ -206,7 +208,7 @@ class CurdleProofsProof:
         transcript.append_list(
             b"curdleproofs_step1", points_affine_to_bytes(vec_R + vec_S + vec_T + vec_U)
         )
-        transcript.append(b"curdleproofs_step1", point_projective_to_bytes(M))
+        transcript.append(b"curdleproofs_step1", point_projective_to_bytes(self.M))
         vec_a = transcript.get_and_append_challenges(b"curdleproofs_vec_a", ell)
 
         self.same_perm_proof.verify(
@@ -216,7 +218,7 @@ class CurdleProofsProof:
             crs_G_sum=crs.G_sum,
             crs_H_sum=crs.H_sum,
             A=self.A,
-            M=M,
+            M=self.M,
             vec_a=vec_a,
             n_blinders=N_BLINDERS,
             transcript=transcript,
@@ -281,6 +283,7 @@ class CurdleProofsProof:
 
     def to_json(self) -> str:
         dic = {
+            "M": point_projective_to_json(self.M),
             "A": point_projective_to_json(self.A),
             "cm_T": self.cm_T.to_json(),
             "cm_U": self.cm_U.to_json(),
@@ -296,6 +299,7 @@ class CurdleProofsProof:
     def from_json(cls: Type[T_CurdleProofsProof], json_str: str) -> T_CurdleProofsProof:
         dic = json.loads(json_str)
         return cls(
+            M=point_projective_from_json(dic["M"]),
             A=point_projective_from_json(dic["A"]),
             cm_T=GroupCommitment.from_json(dic["cm_T"]),
             cm_U=GroupCommitment.from_json(dic["cm_U"]),

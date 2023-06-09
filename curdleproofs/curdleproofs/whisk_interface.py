@@ -1,6 +1,11 @@
+import random
 from typing import Container, Sequence, Tuple
 from curdleproofs.crs import CurdleproofsCrs
-from curdleproofs.curdleproofs import N_BLINDERS, CurdleProofsProof
+from curdleproofs.curdleproofs import (
+    N_BLINDERS,
+    CurdleProofsProof,
+    shuffle_permute_and_commit_input,
+)
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from curdleproofs.opening import TrackerOpeningProof
 from curdleproofs.util import (
@@ -24,9 +29,9 @@ SerializedCurdleProofsProof = bytes
 
 
 def IsValidWhiskShuffleProof(
+    crs: CurdleproofsCrs,
     pre_shuffle_trackers: Sequence[WhiskTracker],
     post_shuffle_trackers: Sequence[WhiskTracker],
-    M: BLSG1Point,
     shuffle_proof: SerializedCurdleProofsProof,
 ) -> Tuple[bool, str]:
     """
@@ -43,9 +48,38 @@ def IsValidWhiskShuffleProof(
 
     shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof.decode())
 
-    M_projective = affine_to_projective(M)
+    return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U)
 
-    return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M_projective)
+
+def GenerateWhiskShuffleProof(
+    crs: CurdleproofsCrs, pre_trackers: Sequence[WhiskTracker]
+) -> Tuple[SerializedCurdleProofsProof, Sequence[WhiskTracker]]:
+    permutation = list(range(len(crs.vec_G)))
+    random.shuffle(permutation)
+    k = Fr(random.randint(1, Fr.field_modulus))
+
+    vec_R = [tracker.r_G for tracker in pre_trackers]
+    vec_S = [tracker.k_r_G for tracker in pre_trackers]
+
+    vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
+        crs, vec_R, vec_S, permutation, k
+    )
+
+    shuffle_proof: CurdleProofsProof = CurdleProofsProof.new(
+        crs=crs,
+        vec_R=vec_R,
+        vec_S=vec_S,
+        vec_T=vec_T,
+        vec_U=vec_U,
+        M=M,
+        permutation=permutation,
+        k=k,
+        vec_m_blinders=vec_m_blinders,
+    )
+
+    post_trackers = [WhiskTracker(r_G, k_r_G) for r_G, k_r_G in zip(vec_T, vec_U)]
+
+    return shuffle_proof.to_json().encode(), post_trackers
 
 
 SerializedWhiskTrackerProof = bytes
