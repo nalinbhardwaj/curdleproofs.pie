@@ -1,4 +1,8 @@
-from .whisk_interface import IsValidWhiskShuffleProof, IsValidWhiskOpeningProof
+from .whisk_interface import (
+    IsValidWhiskShuffleProof,
+    IsValidWhiskOpeningProof,
+    GenerateWhiskTrackerProof,
+)
 from .opening import TrackerOpeningProof
 from .crs import CurdleproofsCrs
 from .curdleproofs import (
