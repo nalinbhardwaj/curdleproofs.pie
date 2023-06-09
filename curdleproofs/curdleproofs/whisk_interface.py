@@ -37,14 +37,11 @@ def IsValidWhiskShuffleProof(
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
     """
-    crs = CurdleproofsCrs.new(len(pre_shuffle_trackers), N_BLINDERS)
-    vec_R = [pre_shuffle_tracker.r_G for pre_shuffle_tracker in pre_shuffle_trackers]
-    vec_S = [pre_shuffle_tracker.k_r_G for pre_shuffle_tracker in pre_shuffle_trackers]
+    vec_R = [tracker.r_G for tracker in pre_shuffle_trackers]
+    vec_S = [tracker.k_r_G for tracker in pre_shuffle_trackers]
 
-    vec_T = [post_shuffle_tracker.r_G for post_shuffle_tracker in post_shuffle_trackers]
-    vec_U = [
-        post_shuffle_tracker.k_r_G for post_shuffle_tracker in post_shuffle_trackers
-    ]
+    vec_T = [tracker.r_G for tracker in post_shuffle_trackers]
+    vec_U = [tracker.k_r_G for tracker in post_shuffle_trackers]
 
     shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof.decode())
 
@@ -52,14 +49,14 @@ def IsValidWhiskShuffleProof(
 
 
 def GenerateWhiskShuffleProof(
-    crs: CurdleproofsCrs, pre_trackers: Sequence[WhiskTracker]
+    crs: CurdleproofsCrs, pre_shuffle_trackers: Sequence[WhiskTracker]
 ) -> Tuple[SerializedCurdleProofsProof, Sequence[WhiskTracker]]:
     permutation = list(range(len(crs.vec_G)))
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
-    vec_R = [tracker.r_G for tracker in pre_trackers]
-    vec_S = [tracker.k_r_G for tracker in pre_trackers]
+    vec_R = [tracker.r_G for tracker in pre_shuffle_trackers]
+    vec_S = [tracker.k_r_G for tracker in pre_shuffle_trackers]
 
     vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
         crs, vec_R, vec_S, permutation, k
