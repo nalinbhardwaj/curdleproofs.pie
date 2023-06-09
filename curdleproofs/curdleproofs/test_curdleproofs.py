@@ -643,8 +643,8 @@ def test_whisk_interface_shuffle_proof():
     ell = N - N_BLINDERS
     crs = generate_random_crs(ell)
     pre_trackers = generate_random_trackers(ell)
-    shuffle_proof, post_trackers = GenerateWhiskShuffleProof(crs, pre_trackers)
-    assert IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, shuffle_proof)
+    post_trackers, m, shuffle_proof = GenerateWhiskShuffleProof(crs, pre_trackers)
+    assert IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, m, shuffle_proof)
 
 
 def generate_random_k() -> Fr:

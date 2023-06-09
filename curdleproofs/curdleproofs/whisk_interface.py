@@ -13,7 +13,7 @@ from curdleproofs.util import (
     affine_to_projective,
     Fr,
 )
-from py_ecc.optimized_bls12_381.optimized_curve import G1
+from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize
 
 
 class WhiskTracker:
@@ -32,6 +32,7 @@ def IsValidWhiskShuffleProof(
     crs: CurdleproofsCrs,
     pre_shuffle_trackers: Sequence[WhiskTracker],
     post_shuffle_trackers: Sequence[WhiskTracker],
+    m: BLSG1Point,
     shuffle_proof: SerializedCurdleProofsProof,
 ) -> Tuple[bool, str]:
     """
@@ -44,13 +45,14 @@ def IsValidWhiskShuffleProof(
     vec_U = [tracker.k_r_G for tracker in post_shuffle_trackers]
 
     shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof.decode())
+    M = affine_to_projective(m)
 
-    return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U)
+    return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
 
 
 def GenerateWhiskShuffleProof(
     crs: CurdleproofsCrs, pre_shuffle_trackers: Sequence[WhiskTracker]
-) -> Tuple[SerializedCurdleProofsProof, Sequence[WhiskTracker]]:
+) -> Tuple[Sequence[WhiskTracker], BLSG1Point, SerializedCurdleProofsProof]:
     permutation = list(range(len(crs.vec_G)))
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
@@ -76,7 +78,7 @@ def GenerateWhiskShuffleProof(
 
     post_trackers = [WhiskTracker(r_G, k_r_G) for r_G, k_r_G in zip(vec_T, vec_U)]
 
-    return shuffle_proof.to_json().encode(), post_trackers
+    return post_trackers, normalize(M), shuffle_proof.to_json().encode()
 
 
 SerializedWhiskTrackerProof = bytes
