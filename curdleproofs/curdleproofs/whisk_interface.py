@@ -3,13 +3,21 @@ from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.curdleproofs import N_BLINDERS, CurdleProofsProof
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from curdleproofs.opening import TrackerOpeningProof
-from curdleproofs.util import PointAffine as BLSG1Point, affine_to_projective
+from curdleproofs.util import (
+    PointAffine as BLSG1Point,
+    affine_to_projective,
+    Fr,
+)
 from py_ecc.optimized_bls12_381.optimized_curve import G1
 
 
-class WhiskTracker(Container):
+class WhiskTracker:
     r_G: BLSG1Point  # r * G
     k_r_G: BLSG1Point  # k * r * G
+
+    def __init__(self, r_G: BLSG1Point, k_r_G: BLSG1Point):
+        self.r_G = r_G
+        self.k_r_G = k_r_G
 
 
 SerializedCurdleProofsProof = bytes
@@ -53,14 +61,28 @@ def IsValidWhiskOpeningProof(
     """
     tracker_proof_instance = TrackerOpeningProof.from_json(tracker_proof.decode())
 
-    if not tracker_proof_instance.G == G1:
-        return False
-    if not tracker_proof_instance.k_G == k_commitment:
-        return False
-    if not tracker_proof_instance.k_r_G == tracker.k_r_G:
-        return False
-    if not tracker_proof_instance.r_G == tracker.r_G:
-        return False
-
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
-    return tracker_proof_instance.verify(transcript_verifier)
+    return tracker_proof_instance.verify(
+        transcript_verifier,
+        affine_to_projective(tracker.k_r_G),
+        affine_to_projective(tracker.r_G),
+        affine_to_projective(k_commitment),
+    )
+
+
+def GenerateWhiskTrackerProof(
+    tracker: WhiskTracker,
+    k_G: BLSG1Point,
+    k: Fr,
+) -> SerializedWhiskTrackerProof:
+    transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
+    opening_proof = TrackerOpeningProof.new(
+        k_r_G=affine_to_projective(tracker.k_r_G),
+        r_G=affine_to_projective(tracker.r_G),
+        k_G=affine_to_projective(k_G),
+        G=G1,
+        k=k,
+        transcript=transcript_prover,
+    )
+
+    return opening_proof.to_json().encode()

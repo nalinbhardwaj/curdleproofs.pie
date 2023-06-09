@@ -47,6 +47,11 @@ from curdleproofs.curdleproofs import (
     VerifierInput,
     shuffle_permute_and_commit_input,
 )
+from curdleproofs.whisk_interface import (
+    WhiskTracker,
+    GenerateWhiskTrackerProof,
+    IsValidWhiskOpeningProof,
+)
 
 
 def test_ipa():
@@ -618,4 +623,29 @@ def test_tracker_opening_proof():
     deser_proof = TrackerOpeningProof.from_json(json_str_proof)
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
-    assert deser_proof.verify(transcript_verifier)
+    assert deser_proof.verify(transcript_verifier, k_r_G, r_G, k_G)
+
+
+def test_whisk_interface_tracker_opening_proof():
+    k = generate_random_k()
+    tracker = generate_tracker(k)
+
+    k_commitment = get_k_commitment(k)
+    tracker_proof = GenerateWhiskTrackerProof(tracker, k_commitment, k)
+
+    assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
+
+
+def generate_random_k() -> Fr:
+    return generate_blinders(1)[0]
+
+
+def get_k_commitment(k: Fr) -> PointAffine:
+    return normalize(multiply(G1, int(k)))
+
+
+def generate_tracker(k: Fr) -> WhiskTracker:
+    r = generate_blinders(1)[0]
+    r_G = multiply(G1, int(r))
+    k_r_G = multiply(r_G, int(k))
+    return WhiskTracker(normalize(r_G), normalize(k_r_G))
