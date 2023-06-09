@@ -1,6 +1,7 @@
 from .whisk_interface import (
     IsValidWhiskShuffleProof,
     IsValidWhiskOpeningProof,
+    GenerateWhiskShuffleProof,
     GenerateWhiskTrackerProof,
 )
 from .opening import TrackerOpeningProof
