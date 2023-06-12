@@ -22,6 +22,12 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     neg,
     eq,
 )
+from py_ecc.bls.g2_primitives import (
+    G1_to_pubkey,
+    pubkey_to_G1,
+)
+from py_ecc.bls.hash import i2osp, os2ip
+from eth_typing import BLSPubkey
 
 T_TrackerOpeningProof = TypeVar("T_TrackerOpeningProof", bound="TrackerOpeningProof")
 
@@ -84,22 +90,16 @@ class TrackerOpeningProof:
 
         return eq(Aprime, self.A) and eq(Bprime, self.B)
 
-    def to_json(self) -> str:
-        return json.dumps(
-            {
-                "A": point_projective_to_json(self.A),
-                "B": point_projective_to_json(self.B),
-                "s": field_to_json(self.s),
-            }
-        )
-
+    def to_bytes(self) -> bytes:
+        A = G1_to_pubkey(self.A)
+        B = G1_to_pubkey(self.B)
+        s = i2osp(int(self.s), 32)
+        return A + B + s
+    
     @classmethod
-    def from_json(
-        cls: Type[T_TrackerOpeningProof], json_str: str
-    ) -> T_TrackerOpeningProof:
-        dic = json.loads(json_str)
-        return cls(
-            point_projective_from_json(dic["A"]),
-            point_projective_from_json(dic["B"]),
-            field_from_json(dic["s"], Fr),
-        )
+    def from_bytes(cls: Type[T_TrackerOpeningProof], b: bytes) -> T_TrackerOpeningProof:
+        A = pubkey_to_G1(BLSPubkey(b[0:48]))
+        B = pubkey_to_G1(BLSPubkey(b[48:96]))
+        s = Fr(os2ip(b[96:128]))
+        return cls(A, B, s)
+
