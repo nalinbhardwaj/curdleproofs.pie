@@ -27,6 +27,7 @@ from py_ecc.bls.g2_primitives import (
     pubkey_to_G1,
 )
 from py_ecc.bls.hash import i2osp, os2ip
+from eth_typing import BLSPubkey
 
 T_TrackerOpeningProof = TypeVar("T_TrackerOpeningProof", bound="TrackerOpeningProof")
 
@@ -49,12 +50,11 @@ class TrackerOpeningProof:
         k_r_G: PointProjective,
         r_G: PointProjective,
         k_G: PointProjective,
-        G: PointProjective,
         k: Fr,
         transcript: CurdleproofsTranscript,
     ) -> T_TrackerOpeningProof:
         blinder = generate_blinders(1)[0]
-        A = multiply(G, int(blinder))
+        A = multiply(G1, int(blinder))
         B = multiply(r_G, int(blinder))
 
         transcript.append_list(
@@ -97,8 +97,8 @@ class TrackerOpeningProof:
     
     @classmethod
     def from_bytes(cls: Type[T_TrackerOpeningProof], b: bytes) -> T_TrackerOpeningProof:
-        A = pubkey_to_G1(b[0:48])
-        B = pubkey_to_G1(b[48:96])
+        A = pubkey_to_G1(BLSPubkey(b[0:48]))
+        B = pubkey_to_G1(BLSPubkey(b[48:96]))
         s = Fr(os2ip(b[96:128]))
         return cls(A, B, s)
 

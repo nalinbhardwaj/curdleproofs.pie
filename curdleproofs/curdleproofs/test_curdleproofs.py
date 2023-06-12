@@ -53,6 +53,11 @@ from curdleproofs.whisk_interface import (
     IsValidWhiskOpeningProof,
     IsValidWhiskShuffleProof,
 )
+from py_ecc.bls.g2_primitives import (
+    G1_to_pubkey,
+    pubkey_to_G1,
+)
+from eth_typing import BLSPubkey
 
 
 def test_ipa():
@@ -650,15 +655,15 @@ def generate_random_k() -> Fr:
     return generate_blinders(1)[0]
 
 
-def get_k_commitment(k: Fr) -> PointAffine:
-    return normalize(multiply(G1, int(k)))
+def get_k_commitment(k: Fr) -> BLSPubkey:
+    return G1_to_pubkey(multiply(G1, int(k)))
 
 
 def generate_tracker(k: Fr) -> WhiskTracker:
     r = generate_blinders(1)[0]
     r_G = multiply(G1, int(r))
     k_r_G = multiply(r_G, int(k))
-    return WhiskTracker(normalize(r_G), normalize(k_r_G))
+    return WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G))
 
 
 def generate_random_crs(ell: int) -> CurdleproofsCrs:
