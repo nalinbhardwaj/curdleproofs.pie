@@ -5,20 +5,16 @@ from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.ipa import generate_blinders
 from curdleproofs.util import (
     affine_to_projective,
-    point_affine_from_json,
     point_affine_to_bytes,
-    point_affine_to_json,
     point_projective_from_json,
     point_projective_to_bytes,
     point_projective_to_json,
-    points_affine_to_bytes,
     points_projective_to_bytes,
     get_random_point,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from curdleproofs.util import (
-    PointAffine,
     PointProjective,
     Fr,
     field_to_bytes,
@@ -72,10 +68,10 @@ class CurdleProofsProof:
     def new(
         cls: Type[T_CurdleProofsProof],
         crs: CurdleproofsCrs,
-        vec_R: List[PointAffine],
-        vec_S: List[PointAffine],
-        vec_T: List[PointAffine],
-        vec_U: List[PointAffine],
+        vec_R: List[PointProjective],
+        vec_S: List[PointProjective],
+        vec_T: List[PointProjective],
+        vec_U: List[PointProjective],
         M: PointProjective,
         permutation: List[int],
         k: Fr,
@@ -86,7 +82,7 @@ class CurdleProofsProof:
         transcript = CurdleproofsTranscript(b"curdleproofs")
 
         transcript.append_list(
-            b"curdleproofs_step1", points_affine_to_bytes(vec_R + vec_S + vec_T + vec_U)
+            b"curdleproofs_step1", points_projective_to_bytes(vec_R + vec_S + vec_T + vec_U)
         )
         transcript.append(b"curdleproofs_step1", point_projective_to_bytes(M))
         vec_a = transcript.get_and_append_challenges(b"curdleproofs_vec_a", ell)
@@ -118,8 +114,8 @@ class CurdleProofsProof:
 
         r_t = Fr(random.randint(1, Fr.field_modulus))
         r_u = Fr(random.randint(1, Fr.field_modulus))
-        R = compute_MSM(list(map(affine_to_projective, vec_R)), vec_a)
-        S = compute_MSM(list(map(affine_to_projective, vec_S)), vec_a)
+        R = compute_MSM(vec_R, vec_a)
+        S = compute_MSM(vec_S, vec_a)
 
         cm_T: GroupCommitment = GroupCommitment.new(
             crs.G_t, crs.H, multiply(R, int(k)), r_t
@@ -148,14 +144,14 @@ class CurdleProofsProof:
             crs.vec_G + crs.vec_H[: (N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
         )
 
-        vec_T_with_blinders = list(map(affine_to_projective, vec_T)) + [
+        vec_T_with_blinders = vec_T + [
             Z1,
             Z1,
             crs.H,
             Z1,
         ]
 
-        vec_U_with_blinders = list(map(affine_to_projective, vec_U)) + [
+        vec_U_with_blinders = vec_U + [
             Z1,
             Z1,
             Z1,
@@ -189,10 +185,10 @@ class CurdleProofsProof:
     def verify(
         self,
         crs: CurdleproofsCrs,
-        vec_R: List[PointAffine],
-        vec_S: List[PointAffine],
-        vec_T: List[PointAffine],
-        vec_U: List[PointAffine],
+        vec_R: List[PointProjective],
+        vec_S: List[PointProjective],
+        vec_T: List[PointProjective],
+        vec_U: List[PointProjective],
         M: PointProjective,
     ) -> Tuple[bool, str]:
         ell = len(vec_R)
@@ -200,11 +196,11 @@ class CurdleProofsProof:
         transcript = CurdleproofsTranscript(b"curdleproofs")
         msm_accumulator = MSMAccumulator()
 
-        if is_inf(affine_to_projective(vec_T[0])):
+        if is_inf(vec_T[0]):
             return False, "vec_T[0] is infinity"
 
         transcript.append_list(
-            b"curdleproofs_step1", points_affine_to_bytes(vec_R + vec_S + vec_T + vec_U)
+            b"curdleproofs_step1", points_projective_to_bytes(vec_R + vec_S + vec_T + vec_U)
         )
         transcript.append(b"curdleproofs_step1", point_projective_to_bytes(M))
         vec_a = transcript.get_and_append_challenges(b"curdleproofs_vec_a", ell)
@@ -240,14 +236,14 @@ class CurdleProofsProof:
             crs.vec_G + crs.vec_H[: (N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
         )
 
-        vec_T_with_blinders = list(map(affine_to_projective, vec_T)) + [
+        vec_T_with_blinders = vec_T + [
             Z1,
             Z1,
             crs.H,
             Z1,
         ]
 
-        vec_U_with_blinders = list(map(affine_to_projective, vec_U)) + [
+        vec_U_with_blinders = vec_U + [
             Z1,
             Z1,
             Z1,
@@ -266,10 +262,10 @@ class CurdleProofsProof:
         )
 
         msm_accumulator.accumulate_check(
-            self.R, list(map(affine_to_projective, vec_R)), vec_a
+            self.R, vec_R, vec_a
         )
         msm_accumulator.accumulate_check(
-            self.S, list(map(affine_to_projective, vec_S)), vec_a
+            self.S, vec_S, vec_a
         )
 
         msm_verify = msm_accumulator.verify()
@@ -309,15 +305,15 @@ class CurdleProofsProof:
 
 def shuffle_permute_and_commit_input(
     crs: CurdleproofsCrs,
-    vec_R: List[PointAffine],
-    vec_S: List[PointAffine],
+    vec_R: List[PointProjective],
+    vec_S: List[PointProjective],
     permutation: List[int],
     k: Fr,
-) -> Tuple[List[PointAffine], List[PointAffine], PointProjective, List[Fr]]:
+) -> Tuple[List[PointProjective], List[PointProjective], PointProjective, List[Fr]]:
     ell = len(crs.vec_G)
 
-    vec_T = [normalize(multiply(affine_to_projective(R), int(k))) for R in vec_R]
-    vec_U = [normalize(multiply(affine_to_projective(S), int(k))) for S in vec_S]
+    vec_T = [multiply(R, int(k)) for R in vec_R]
+    vec_U = [multiply(S, int(k)) for S in vec_S]
     vec_T = get_permutation(vec_T, permutation)
     vec_U = get_permutation(vec_U, permutation)
 
@@ -336,10 +332,10 @@ T_VerifierInput = TypeVar("T_VerifierInput", bound="VerifierInput")
 class VerifierInput:
     def __init__(
         self,
-        vec_R: List[PointAffine],
-        vec_S: List[PointAffine],
-        vec_T: List[PointAffine],
-        vec_U: List[PointAffine],
+        vec_R: List[PointProjective],
+        vec_S: List[PointProjective],
+        vec_T: List[PointProjective],
+        vec_U: List[PointProjective],
         M: PointProjective,
     ) -> None:
         self.vec_R = vec_R
@@ -350,10 +346,10 @@ class VerifierInput:
 
     def to_json(self) -> str:
         dic = {
-            "vec_R": [point_affine_to_json(R) for R in self.vec_R],
-            "vec_S": [point_affine_to_json(S) for S in self.vec_S],
-            "vec_T": [point_affine_to_json(T) for T in self.vec_T],
-            "vec_U": [point_affine_to_json(U) for U in self.vec_U],
+            "vec_R": [point_projective_to_json(R) for R in self.vec_R],
+            "vec_S": [point_projective_to_json(S) for S in self.vec_S],
+            "vec_T": [point_projective_to_json(T) for T in self.vec_T],
+            "vec_U": [point_projective_to_json(U) for U in self.vec_U],
             "M": point_projective_to_json(self.M),
         }
         return json.dumps(dic)
@@ -362,9 +358,9 @@ class VerifierInput:
     def from_json(cls: Type[T_VerifierInput], json_str: str) -> T_VerifierInput:
         dic = json.loads(json_str)
         return cls(
-            vec_R=[point_affine_from_json(R) for R in dic["vec_R"]],
-            vec_S=[point_affine_from_json(S) for S in dic["vec_S"]],
-            vec_T=[point_affine_from_json(T) for T in dic["vec_T"]],
-            vec_U=[point_affine_from_json(U) for U in dic["vec_U"]],
+            vec_R=[point_projective_from_json(R) for R in dic["vec_R"]],
+            vec_S=[point_projective_from_json(S) for S in dic["vec_S"]],
+            vec_T=[point_projective_from_json(T) for T in dic["vec_T"]],
+            vec_U=[point_projective_from_json(U) for U in dic["vec_U"]],
             M=point_projective_from_json(dic["M"]),
         )

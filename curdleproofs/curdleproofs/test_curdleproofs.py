@@ -17,7 +17,6 @@ from curdleproofs.util import (
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from curdleproofs.util import (
-    PointAffine,
     PointProjective,
     Fr,
     field_to_bytes,
@@ -31,7 +30,6 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
     G1,
     multiply,
-    normalize,
     add,
     neg,
     Z1,
@@ -436,8 +434,8 @@ def test_shuffle_argument():
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
-    vec_R = [normalize(get_random_point()) for _ in range(ell)]
-    vec_S = [normalize(get_random_point()) for _ in range(ell)]
+    vec_R = [get_random_point() for _ in range(ell)]
+    vec_S = [get_random_point() for _ in range(ell)]
 
     vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
         crs, vec_R, vec_S, permutation, k
@@ -475,8 +473,8 @@ def test_bad_shuffle_argument():
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
-    vec_R = [normalize(get_random_point()) for _ in range(ell)]
-    vec_S = [normalize(get_random_point()) for _ in range(ell)]
+    vec_R = [get_random_point() for _ in range(ell)]
+    vec_S = [get_random_point() for _ in range(ell)]
 
     vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
         crs, vec_R, vec_S, permutation, k
@@ -524,12 +522,8 @@ def test_bad_shuffle_argument():
     assert not verify
 
     another_k = Fr(random.randint(1, Fr.field_modulus))
-    another_vec_T = [
-        normalize(multiply(affine_to_projective(T), int(another_k))) for T in vec_T
-    ]
-    another_vec_U = [
-        normalize(multiply(affine_to_projective(U), int(another_k))) for U in vec_U
-    ]
+    another_vec_T = [multiply(affine_to_projective(T), int(another_k)) for T in vec_T]
+    another_vec_U = [multiply(affine_to_projective(U), int(another_k)) for U in vec_U]
 
     verify, err = shuffle_proof.verify(
         crs, vec_R, vec_S, another_vec_T, another_vec_U, M
@@ -549,8 +543,8 @@ def test_serde():
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
-    vec_R = [normalize(get_random_point()) for _ in range(ell)]
-    vec_S = [normalize(get_random_point()) for _ in range(ell)]
+    vec_R = [get_random_point() for _ in range(ell)]
+    vec_S = [get_random_point() for _ in range(ell)]
 
     vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
         crs, vec_R, vec_S, permutation, k
@@ -651,15 +645,15 @@ def generate_random_k() -> Fr:
     return generate_blinders(1)[0]
 
 
-def get_k_commitment(k: Fr) -> PointAffine:
-    return normalize(multiply(G1, int(k)))
+def get_k_commitment(k: Fr) -> PointProjective:
+    return multiply(G1, int(k))
 
 
 def generate_tracker(k: Fr) -> WhiskTracker:
     r = generate_blinders(1)[0]
     r_G = multiply(G1, int(r))
     k_r_G = multiply(r_G, int(k))
-    return WhiskTracker(normalize(r_G), normalize(k_r_G))
+    return WhiskTracker(r_G, k_r_G)
 
 
 def generate_random_crs(ell: int) -> CurdleproofsCrs:
