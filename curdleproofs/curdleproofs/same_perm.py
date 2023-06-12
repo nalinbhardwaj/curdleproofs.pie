@@ -7,7 +7,6 @@ from curdleproofs.ipa import generate_blinders
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from curdleproofs.util import (
-    PointAffine,
     PointProjective,
     Fr,
     field_to_bytes,

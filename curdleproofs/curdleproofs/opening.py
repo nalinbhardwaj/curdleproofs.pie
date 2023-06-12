@@ -59,7 +59,7 @@ class TrackerOpeningProof:
 
         transcript.append_list(
             b"tracker_opening_proof",
-            points_projective_to_bytes([k_G, G, k_r_G, r_G, A, B]),
+            points_projective_to_bytes([k_G, G1, k_r_G, r_G, A, B]),
         )
 
         challenge = transcript.get_and_append_challenge(

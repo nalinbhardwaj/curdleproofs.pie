@@ -16,7 +16,6 @@ from curdleproofs.util import (
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar, Type
 from curdleproofs.util import (
-    PointAffine,
     PointProjective,
     Fr,
     field_to_bytes,
