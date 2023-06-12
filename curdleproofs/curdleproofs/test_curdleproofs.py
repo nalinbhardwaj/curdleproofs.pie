@@ -632,13 +632,21 @@ def test_tracker_opening_proof():
     assert deser_proof.verify(transcript_verifier, k_r_G, r_G, k_G)
 
 
-def test_whisk_interface_tracker_opening_proof():
+def test_whisk_interface_tracker_opening_proof_random():
     k = generate_random_k()
     k_commitment = get_k_commitment(k)
     tracker = generate_tracker(k)
 
     tracker_proof = GenerateWhiskTrackerProof(tracker, k)
 
+    assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
+
+
+def test_whisk_interface_tracker_opening_proof_identity():
+    k = Fr(1)
+    k_commitment = get_k_commitment(k)
+    tracker = WhiskTracker(G1_to_pubkey(G1), G1_to_pubkey(G1))
+    tracker_proof = GenerateWhiskTrackerProof(tracker, k)
     assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
 
 
@@ -649,6 +657,13 @@ def test_whisk_interface_shuffle_proof():
     pre_trackers = generate_random_trackers(ell)
     post_trackers, m, shuffle_proof = GenerateWhiskShuffleProof(crs, pre_trackers)
     assert IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, m, shuffle_proof)
+
+
+def test_serde_g1_generator():
+    g1_bytes = G1_to_pubkey(G1)
+    assert g1_bytes.hex() == '97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb'
+    g1_b = pubkey_to_G1(g1_bytes)
+    assert g1_b == G1
 
 
 def generate_random_k() -> Fr:
