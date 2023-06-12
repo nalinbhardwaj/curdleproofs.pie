@@ -3,6 +3,7 @@ from .whisk_interface import (
     IsValidWhiskOpeningProof,
     GenerateWhiskShuffleProof,
     GenerateWhiskTrackerProof,
+    WhiskTracker,
 )
 from .opening import TrackerOpeningProof
 from .crs import CurdleproofsCrs
