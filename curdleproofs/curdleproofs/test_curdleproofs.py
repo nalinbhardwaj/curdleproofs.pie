@@ -630,10 +630,10 @@ def test_tracker_opening_proof():
 
 def test_whisk_interface_tracker_opening_proof():
     k = generate_random_k()
+    k_commitment = get_k_commitment(k)
     tracker = generate_tracker(k)
 
-    k_commitment = get_k_commitment(k)
-    tracker_proof = GenerateWhiskTrackerProof(tracker, k_commitment, k)
+    tracker_proof = GenerateWhiskTrackerProof(tracker, k)
 
     assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
 
