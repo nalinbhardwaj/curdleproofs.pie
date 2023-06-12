@@ -619,10 +619,10 @@ def test_tracker_opening_proof():
         k_r_G=k_r_G, r_G=r_G, k_G=k_G, G=G, k=k, transcript=transcript_prover
     )
 
-    json_str_proof = opening_proof.to_json()
-    print("json_str_proof", json_str_proof)
+    proof_bytes = opening_proof.to_bytes()
+    print("proof_bytes", proof_bytes)
 
-    deser_proof = TrackerOpeningProof.from_json(json_str_proof)
+    deser_proof = TrackerOpeningProof.from_bytes(proof_bytes)
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
     assert deser_proof.verify(transcript_verifier, k_r_G, r_G, k_G)
