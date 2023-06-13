@@ -51,7 +51,11 @@ def IsValidWhiskShuffleProof(
     vec_T = [pubkey_to_G1(tracker.r_G) for tracker in post_shuffle_trackers]
     vec_U = [pubkey_to_G1(tracker.k_r_G) for tracker in post_shuffle_trackers]
 
-    shuffle_proof_instance = CurdleProofsProof.from_bytes(BufReader(shuffle_proof), len(crs.vec_G))
+    ell = len(crs.vec_G)
+    n_blinders = len(crs.vec_H)
+    n = ell + n_blinders
+
+    shuffle_proof_instance = CurdleProofsProof.from_bytes(BufReader(shuffle_proof), n)
     M = pubkey_to_G1(m)
 
     return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M)

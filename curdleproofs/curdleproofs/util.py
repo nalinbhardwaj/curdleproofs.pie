@@ -1,4 +1,5 @@
 from random import randint
+from math import log2
 from typing import List, Tuple, Type, TypeVar, Union
 from py_ecc.typing import (
     Optimized_Field,
@@ -137,6 +138,13 @@ def g1_list_to_bytes(ps: List[PointProjective]) -> bytes:
 
 def fr_to_bytes(fr: Fr) -> bytes:
     return fr.n.to_bytes(48, "big")
+
+
+def log2_int(x: int) -> int:
+    lg_x = int(log2(x))
+    if x != 2**lg_x:
+        raise Exception("x not a power of 2", x)
+    return lg_x
 
 
 class BufReader:

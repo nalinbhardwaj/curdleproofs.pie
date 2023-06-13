@@ -166,8 +166,8 @@ class SamePermutationProof:
         ])
 
     @classmethod
-    def from_bytes(cls: Type[T_SAME_PERM_PROOF], b: BufReader, ell: int) -> T_SAME_PERM_PROOF:
+    def from_bytes(cls: Type[T_SAME_PERM_PROOF], b: BufReader, n: int) -> T_SAME_PERM_PROOF:
         return cls(
             B=b.read_g1(),
-            grand_prod_proof=GrandProductProof.from_bytes(b, ell),
+            grand_prod_proof=GrandProductProof.from_bytes(b, n),
         )

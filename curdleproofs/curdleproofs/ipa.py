@@ -17,6 +17,7 @@ from curdleproofs.util import (
     g1_to_bytes,
     fr_to_bytes,
     g1_list_to_bytes,
+    log2_int,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
@@ -302,15 +303,15 @@ class IPA:
         ])
     
     @classmethod
-    def from_bytes(cls: Type[T_IPA], b: BufReader, ell: int) -> T_IPA:
-        log2_ell = int(log2(ell))
+    def from_bytes(cls: Type[T_IPA], b: BufReader, n: int) -> T_IPA:
+        log2_n = log2_int(n)
         return cls(
             B_c=b.read_g1(),
             B_d=b.read_g1(),
-            vec_L_C=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_R_C=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_L_D=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_R_D=[b.read_g1() for _ in range(0, log2_ell)],
+            vec_L_C=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_C=[b.read_g1() for _ in range(0, log2_n)],
+            vec_L_D=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_D=[b.read_g1() for _ in range(0, log2_n)],
             c_final=b.read_fr(),
             d_final=b.read_fr(),
         )

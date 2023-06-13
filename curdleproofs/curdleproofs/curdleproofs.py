@@ -317,16 +317,16 @@ class CurdleProofsProof:
         ])
 
     @classmethod
-    def from_bytes(cls: Type[T_CurdleProofsProof], b: BufReader, ell: int) -> T_CurdleProofsProof:
+    def from_bytes(cls: Type[T_CurdleProofsProof], b: BufReader, n: int) -> T_CurdleProofsProof:
         return cls(
             A=b.read_g1(),
             cm_T=GroupCommitment.from_bytes(b),
             cm_U=GroupCommitment.from_bytes(b),
             R=b.read_g1(),
             S=b.read_g1(),
-            same_perm_proof=SamePermutationProof.from_bytes(b, ell),
+            same_perm_proof=SamePermutationProof.from_bytes(b, n),
             same_scalar_proof=SameScalarProof.from_bytes(b),
-            same_msm_proof=SameMSMProof.from_bytes(b, ell),
+            same_msm_proof=SameMSMProof.from_bytes(b, n),
         )
 
 

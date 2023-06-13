@@ -233,9 +233,9 @@ class GrandProductProof:
         ])
 
     @classmethod
-    def from_bytes(cls: Type[T_GrandProductProof], b: BufReader, ell: int) -> T_GrandProductProof:
+    def from_bytes(cls: Type[T_GrandProductProof], b: BufReader, n: int) -> T_GrandProductProof:
         return cls(
             C=b.read_g1(),
             r_p=b.read_fr(),
-            ipa_proof=IPA.from_bytes(b, ell),
+            ipa_proof=IPA.from_bytes(b, n),
         )

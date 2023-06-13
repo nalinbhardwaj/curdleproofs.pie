@@ -19,6 +19,7 @@ from curdleproofs.util import (
     g1_to_bytes,
     fr_to_bytes,
     g1_list_to_bytes,
+    log2_int,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
@@ -299,17 +300,17 @@ class SameMSMProof:
         ])
     
     @classmethod
-    def from_bytes(cls: Type[T_SameMSMProof], b: BufReader, ell: int) -> T_SameMSMProof:
-        log2_ell = int(log2(ell))
+    def from_bytes(cls: Type[T_SameMSMProof], b: BufReader, n: int) -> T_SameMSMProof:
+        log2_n = log2_int(n)
         return cls(
             B_a=b.read_g1(),
             B_t=b.read_g1(),
             B_u=b.read_g1(),
-            vec_L_A=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_L_T=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_L_U=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_R_A=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_R_T=[b.read_g1() for _ in range(0, log2_ell)],
-            vec_R_U=[b.read_g1() for _ in range(0, log2_ell)],
+            vec_L_A=[b.read_g1() for _ in range(0, log2_n)],
+            vec_L_T=[b.read_g1() for _ in range(0, log2_n)],
+            vec_L_U=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_A=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_T=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_U=[b.read_g1() for _ in range(0, log2_n)],
             x_final=b.read_fr(),
         )
