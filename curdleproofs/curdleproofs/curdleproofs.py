@@ -11,6 +11,8 @@ from curdleproofs.util import (
     point_projective_to_json,
     points_projective_to_bytes,
     get_random_point,
+    BufReader,
+    g1_to_bytes,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
@@ -37,6 +39,8 @@ from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
 from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.commitment import GroupCommitment
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
 
 N_BLINDERS = 4
 
@@ -301,6 +305,31 @@ class CurdleProofsProof:
             same_scalar_proof=SameScalarProof.from_json(dic["same_scalar_proof"]),
             same_msm_proof=SameMSMProof.from_json(dic["same_msm_proof"]),
         )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.A),
+            self.cm_T.to_bytes(),
+            self.cm_U.to_bytes(),
+            g1_to_bytes(self.R),
+            g1_to_bytes(self.S),
+            self.same_perm_proof.to_bytes(),
+            self.same_scalar_proof.to_bytes(),
+            self.same_msm_proof.to_bytes(),
+        ])
+
+    @classmethod
+    def from_bytes(cls: Type[T_CurdleProofsProof], b: BufReader, ell: int) -> T_CurdleProofsProof:
+        return cls(
+            A=b.read_g1(),
+            cm_T=GroupCommitment.from_bytes(b),
+            cm_U=GroupCommitment.from_bytes(b),
+            R=b.read_g1(),
+            S=b.read_g1(),
+            same_perm_proof=SamePermutationProof.from_bytes(b, ell),
+            same_scalar_proof=SameScalarProof.from_bytes(b),
+            same_msm_proof=SameMSMProof.from_bytes(b, ell),
+        )
 
 
 def shuffle_permute_and_commit_input(
@@ -324,43 +353,3 @@ def shuffle_permute_and_commit_input(
     M = add(compute_MSM(crs.vec_G, sigma_ell), compute_MSM(crs.vec_H, vec_m_blinders))
 
     return vec_T, vec_U, M, vec_m_blinders
-
-
-T_VerifierInput = TypeVar("T_VerifierInput", bound="VerifierInput")
-
-
-class VerifierInput:
-    def __init__(
-        self,
-        vec_R: List[PointProjective],
-        vec_S: List[PointProjective],
-        vec_T: List[PointProjective],
-        vec_U: List[PointProjective],
-        M: PointProjective,
-    ) -> None:
-        self.vec_R = vec_R
-        self.vec_S = vec_S
-        self.vec_T = vec_T
-        self.vec_U = vec_U
-        self.M = M
-
-    def to_json(self) -> str:
-        dic = {
-            "vec_R": [point_projective_to_json(R) for R in self.vec_R],
-            "vec_S": [point_projective_to_json(S) for S in self.vec_S],
-            "vec_T": [point_projective_to_json(T) for T in self.vec_T],
-            "vec_U": [point_projective_to_json(U) for U in self.vec_U],
-            "M": point_projective_to_json(self.M),
-        }
-        return json.dumps(dic)
-
-    @classmethod
-    def from_json(cls: Type[T_VerifierInput], json_str: str) -> T_VerifierInput:
-        dic = json.loads(json_str)
-        return cls(
-            vec_R=[point_projective_from_json(R) for R in dic["vec_R"]],
-            vec_S=[point_projective_from_json(S) for S in dic["vec_S"]],
-            vec_T=[point_projective_from_json(T) for T in dic["vec_T"]],
-            vec_U=[point_projective_from_json(U) for U in dic["vec_U"]],
-            M=point_projective_from_json(dic["M"]),
-        )

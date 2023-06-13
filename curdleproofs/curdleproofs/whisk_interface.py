@@ -12,6 +12,7 @@ from curdleproofs.util import (
     PointProjective,
     affine_to_projective,
     Fr,
+    BufReader,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize, multiply
 from py_ecc.bls.g2_primitives import (
@@ -50,7 +51,7 @@ def IsValidWhiskShuffleProof(
     vec_T = [pubkey_to_G1(tracker.r_G) for tracker in post_shuffle_trackers]
     vec_U = [pubkey_to_G1(tracker.k_r_G) for tracker in post_shuffle_trackers]
 
-    shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof.decode())
+    shuffle_proof_instance = CurdleProofsProof.from_bytes(BufReader(shuffle_proof), len(crs.vec_G))
     M = pubkey_to_G1(m)
 
     return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
@@ -84,7 +85,7 @@ def GenerateWhiskShuffleProof(
 
     post_trackers = [WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G)) for r_G, k_r_G in zip(vec_T, vec_U)]
 
-    return post_trackers, G1_to_pubkey(M), shuffle_proof.to_json().encode()
+    return post_trackers, G1_to_pubkey(M), shuffle_proof.to_bytes()
 
 
 SerializedWhiskTrackerProof = bytes
@@ -98,7 +99,7 @@ def IsValidWhiskOpeningProof(
     """
     Verify knowledge of `k` such that `tracker.k_r_G == k * tracker.r_G` and `k_commitment == k * BLS_G1_GENERATOR`.
     """
-    tracker_proof_instance = TrackerOpeningProof.from_bytes(tracker_proof)
+    tracker_proof_instance = TrackerOpeningProof.from_bytes(BufReader(tracker_proof))
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
     return tracker_proof_instance.verify(

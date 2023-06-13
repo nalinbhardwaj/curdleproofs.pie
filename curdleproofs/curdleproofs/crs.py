@@ -16,6 +16,8 @@ from curdleproofs.util import (
     get_random_point,
     point_projective_from_json,
     point_projective_to_json,
+    BufReader,
+    g1_to_bytes,
 )
 from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
 from eth_typing import BLSPubkey
@@ -67,27 +69,24 @@ class CurdleproofsCrs:
 
     def to_bytes(self) -> bytes:
         return b''.join([
-            b''.join([G1_to_pubkey(g) for g in self.vec_G]),
-            b''.join([G1_to_pubkey(h) for h in self.vec_H]),
-            G1_to_pubkey(self.H),
-            G1_to_pubkey(self.G_t),
-            G1_to_pubkey(self.G_u),
-            G1_to_pubkey(self.G_sum),
-            G1_to_pubkey(self.H_sum),
+            b''.join([g1_to_bytes(g) for g in self.vec_G]),
+            b''.join([g1_to_bytes(h) for h in self.vec_H]),
+            g1_to_bytes(self.H),
+            g1_to_bytes(self.G_t),
+            g1_to_bytes(self.G_u),
+            g1_to_bytes(self.G_sum),
+            g1_to_bytes(self.H_sum),
         ])
     
     @classmethod
-    def from_bytes(cls: Type[T_CurdleproofsCrs], b: bytes, ell: int, n_blinders: int) -> T_CurdleproofsCrs:
-        def read_g1_point(i: int) -> PointProjective:
-            return pubkey_to_G1(BLSPubkey(b[48 * i:48 * (i + 1)]))
-        
+    def from_bytes(cls: Type[T_CurdleproofsCrs], b: BufReader, ell: int, n_blinders: int) -> T_CurdleproofsCrs:
         return cls(
-            vec_G=[read_g1_point(i) for i in range(0, ell)],
-            vec_H=[read_g1_point(ell + i) for i in range(0, n_blinders)],
-            H=read_g1_point(ell + n_blinders),
-            G_t=read_g1_point(ell + n_blinders + 1),
-            G_u=read_g1_point(ell + n_blinders + 2),
-            G_sum=read_g1_point(ell + n_blinders + 3),
-            H_sum=read_g1_point(ell + n_blinders + 4),
+            vec_G=[b.read_g1() for _ in range(0, ell)],
+            vec_H=[b.read_g1() for _ in range(0, n_blinders)],
+            H=b.read_g1(),
+            G_t=b.read_g1(),
+            G_u=b.read_g1(),
+            G_sum=b.read_g1(),
+            H_sum=b.read_g1(),
         )
 

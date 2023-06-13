@@ -12,6 +12,9 @@ from curdleproofs.util import (
     point_projective_to_bytes,
     get_random_point,
     point_projective_to_json,
+    BufReader,
+    g1_to_bytes,
+    fr_to_bytes,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, TypeVar, Type
@@ -222,4 +225,19 @@ class GrandProductProof:
             C=point_projective_from_json(dic["C"]),
             r_p=field_from_json(dic["r_p"], Fr),
             ipa_proof=IPA.from_json(dic["ipa_proof"]),
+        )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.C),
+            fr_to_bytes(self.r_p),
+            self.ipa_proof.to_bytes(),
+        ])
+
+    @classmethod
+    def from_bytes(cls: Type[T_GrandProductProof], b: BufReader, ell: int) -> T_GrandProductProof:
+        return cls(
+            C=b.read_g1(),
+            r_p=b.read_fr(),
+            ipa_proof=IPA.from_bytes(b, ell),
         )

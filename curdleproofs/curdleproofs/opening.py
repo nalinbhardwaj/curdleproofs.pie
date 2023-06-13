@@ -12,6 +12,9 @@ from curdleproofs.util import (
     point_projective_to_bytes,
     point_projective_to_json,
     points_projective_to_bytes,
+    BufReader,
+    g1_to_bytes,
+    fr_to_bytes,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
@@ -89,16 +92,27 @@ class TrackerOpeningProof:
 
         return eq(Aprime, self.A) and eq(Bprime, self.B)
 
+    def to_json(self) -> str:
+        dic = {
+            "A": point_projective_to_json(self.A),
+            "B": point_projective_to_json(self.B),
+            "s": field_to_json(self.s),
+        }
+        return json.dumps(dic)
+
     def to_bytes(self) -> bytes:
-        A = G1_to_pubkey(self.A)
-        B = G1_to_pubkey(self.B)
-        s = i2osp(int(self.s), 32)
-        return A + B + s
+        return b''.join([
+            g1_to_bytes(self.A),
+            g1_to_bytes(self.B),
+            fr_to_bytes(self.s)
+        ])
     
     @classmethod
-    def from_bytes(cls: Type[T_TrackerOpeningProof], b: bytes) -> T_TrackerOpeningProof:
-        A = pubkey_to_G1(BLSPubkey(b[0:48]))
-        B = pubkey_to_G1(BLSPubkey(b[48:96]))
-        s = Fr(os2ip(b[96:128]))
-        return cls(A, B, s)
+    def from_bytes(cls: Type[T_TrackerOpeningProof], b: BufReader) -> T_TrackerOpeningProof:
+        return cls(
+            A=b.read_g1(),
+            B=b.read_g1(),
+            s=b.read_fr()
+        )
+
 

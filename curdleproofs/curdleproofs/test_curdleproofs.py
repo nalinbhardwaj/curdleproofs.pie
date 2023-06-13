@@ -26,6 +26,7 @@ from curdleproofs.util import (
     generate_blinders,
     inner_product,
     get_verification_scalars_bitstring,
+    BufReader,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
@@ -45,7 +46,6 @@ from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.curdleproofs import (
     N_BLINDERS,
     CurdleProofsProof,
-    VerifierInput,
     shuffle_permute_and_commit_input,
 )
 from curdleproofs.whisk_interface import (
@@ -545,72 +545,6 @@ def test_bad_shuffle_argument():
     assert not verify
 
 
-def test_serde():
-    N = 64
-    ell = N - N_BLINDERS
-
-    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
-
-    permutation = list(range(ell))
-    random.shuffle(permutation)
-    k = Fr(random.randint(1, Fr.field_modulus))
-
-    vec_R = [normalize(get_random_point()) for _ in range(ell)]
-    vec_S = [normalize(get_random_point()) for _ in range(ell)]
-
-    vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
-        crs, vec_R, vec_S, permutation, k
-    )
-
-    shuffle_proof: CurdleProofsProof = CurdleProofsProof.new(
-        crs=crs,
-        vec_R=vec_R,
-        vec_S=vec_S,
-        vec_T=vec_T,
-        vec_U=vec_U,
-        M=M,
-        permutation=permutation,
-        k=k,
-        vec_m_blinders=vec_m_blinders,
-    )
-
-    print("shuffle proof", shuffle_proof)
-
-    json_str_proof = shuffle_proof.to_json()
-    print("json_str_proof", json_str_proof)
-
-    json_str_crs = crs.to_json()
-    print("json_str_crs", json_str_crs)
-
-    verifier_input = VerifierInput(
-        vec_R=vec_R,
-        vec_S=vec_S,
-        vec_T=vec_T,
-        vec_U=vec_U,
-        M=M,
-    )
-
-    json_str_verifier_input = verifier_input.to_json()
-
-    deser_shuffle_proof = CurdleProofsProof.from_json(json_str_proof)
-    deser_crs = CurdleproofsCrs.from_json(json_str_crs)
-    deser_verifier_input = VerifierInput.from_json(json_str_verifier_input)
-
-    # for i in range(50):
-    #   print("iter ", i)
-    verify, err = deser_shuffle_proof.verify(
-        deser_crs,
-        deser_verifier_input.vec_R,
-        deser_verifier_input.vec_S,
-        deser_verifier_input.vec_T,
-        deser_verifier_input.vec_U,
-        deser_verifier_input.M,
-    )
-    print("verify", verify)
-    print("err", err)
-    assert verify
-
-
 def test_tracker_opening_proof():
     G = G1
     k = generate_blinders(1)[0]
@@ -673,7 +607,57 @@ def test_serde_crs():
     ell = N - N_BLINDERS
     crs = CurdleproofsCrs.new(ell, N_BLINDERS)
     crs_bytes = crs.to_bytes()
-    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(crs_bytes, ell, N_BLINDERS))
+    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(BufReader(crs_bytes), ell, N_BLINDERS))
+
+
+def test_serde_tracker_proof():
+    proof = TrackerOpeningProof(
+        multiply(G1, int(generate_blinders(1)[0])),
+        multiply(G1, int(generate_blinders(1)[0])),
+        generate_blinders(1)[0],
+    )
+    proof_bytes = proof.to_bytes()
+    assert TrackerOpeningProof.from_bytes(BufReader(proof_bytes)).to_json() == proof.to_json() 
+
+
+def test_serde_shuffle_proof():
+    N = 64
+    ell = N - N_BLINDERS
+    crs = generate_random_crs(ell)
+    pre_shuffle_trackers = generate_random_trackers(ell)
+    permutation = list(range(len(crs.vec_G)))
+    random.shuffle(permutation)
+    k = Fr(random.randint(1, Fr.field_modulus))
+
+    vec_R = [pubkey_to_G1(tracker.r_G) for tracker in pre_shuffle_trackers]
+    vec_S = [pubkey_to_G1(tracker.k_r_G) for tracker in pre_shuffle_trackers]
+
+    vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
+        crs, vec_R, vec_S, permutation, k
+    )
+
+    shuffle_proof = CurdleProofsProof.new(
+        crs=crs,
+        vec_R=vec_R,
+        vec_S=vec_S,
+        vec_T=vec_T,
+        vec_U=vec_U,
+        M=M,
+        permutation=permutation,
+        k=k,
+        vec_m_blinders=vec_m_blinders,
+    )
+
+    shuffle_proof_bytes = shuffle_proof.to_bytes()
+
+    # Assert individual properties first
+    assert GroupCommitment.from_bytes(BufReader(shuffle_proof.cm_T.to_bytes())).to_json() == shuffle_proof.cm_T.to_json()
+    assert GroupCommitment.from_bytes(BufReader(shuffle_proof.cm_U.to_bytes())).to_json() == shuffle_proof.cm_U.to_json()
+    assert SamePermutationProof.from_bytes(BufReader(shuffle_proof.same_scalar_proof.to_bytes()), ell).to_json() == shuffle_proof.same_scalar_proof.to_json()
+    assert SameScalarProof.from_bytes(BufReader(shuffle_proof.same_scalar_proof.to_bytes())).to_json() == shuffle_proof.same_scalar_proof.to_json()
+    assert SameMSMProof.from_bytes(BufReader(shuffle_proof.same_msm_proof.to_bytes())).to_json() == shuffle_proof.same_msm_proof.to_json()
+
+    assert CurdleProofsProof.from_bytes(BufReader(shuffle_proof_bytes), ell).to_json() == shuffle_proof.to_json()
 
 
 def generate_random_k() -> Fr:

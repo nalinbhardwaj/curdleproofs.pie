@@ -15,6 +15,10 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     neg,
     FQ,
 )
+from py_ecc.bls.hash import os2ip, i2osp
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
+from py_ecc.bls.point_compression import compress_G1
 
 
 class Fr(FQ_type):
@@ -51,6 +55,10 @@ def fields_to_bytes(fields: List[Fr]) -> List[bytes]:
 
 def affine_to_projective(point: PointAffine) -> PointProjective:
     return (point[0], point[1], FQ.one())
+
+
+def g1_from_bytes(b: bytes, offset_point: int) -> PointProjective:
+    return pubkey_to_G1(BLSPubkey(b[48 * offset_point:48 * (offset_point + 1)]))
 
 
 def invert(f: Fr) -> Fr:
@@ -117,3 +125,33 @@ def point_affine_from_json(t: Tuple[str, str]) -> PointAffine:
 
 def point_projective_from_json(t: Tuple[str, str]) -> PointProjective:
     return affine_to_projective(point_affine_from_json(t))
+
+
+def g1_to_bytes(p: PointProjective) -> bytes:
+    return compress_G1(p).to_bytes(48, 'big')
+
+
+def g1_list_to_bytes(ps: List[PointProjective]) -> bytes:
+    return b''.join([g1_to_bytes(p) for p in ps])
+
+
+def fr_to_bytes(fr: Fr) -> bytes:
+    return fr.n.to_bytes(48, "big")
+
+
+class BufReader:
+    def __init__(self, data):
+        self.data = data
+        self.ptr = 0
+
+    def read_g1(self) -> PointProjective:
+        end_ptr = self.ptr + 48
+        p = pubkey_to_G1(BLSPubkey(self.data[self.ptr:end_ptr]))
+        self.ptr = end_ptr
+        return p
+    
+    def read_fr(self) -> Fr:
+        end_ptr = self.ptr + 48
+        p = Fr(os2ip(self.data[self.ptr:end_ptr]))
+        self.ptr = end_ptr
+        return p
