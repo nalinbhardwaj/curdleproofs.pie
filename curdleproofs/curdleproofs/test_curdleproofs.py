@@ -599,10 +599,9 @@ def test_serde_g1_generator():
 
 def test_serde_crs():
     N = 64
-    ell = N - N_BLINDERS
-    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
+    crs = CurdleproofsCrs.new(N, N_BLINDERS)
     crs_bytes = crs.to_bytes()
-    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(BufReader(crs_bytes), ell, N_BLINDERS))
+    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(BufReader(crs_bytes), N, N_BLINDERS))
 
 
 def test_serde_tracker_proof():
@@ -618,7 +617,7 @@ def test_serde_tracker_proof():
 def test_serde_shuffle_proof():
     N = 64
     ell = N - N_BLINDERS
-    crs = generate_random_crs(ell)
+    crs = generate_random_crs(N)
     pre_shuffle_trackers = generate_random_trackers(ell)
     permutation = list(range(len(crs.vec_G)))
     random.shuffle(permutation)
@@ -679,8 +678,8 @@ def generate_tracker(k: Fr) -> WhiskTracker:
     return WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G))
 
 
-def generate_random_crs(ell: int) -> CurdleproofsCrs:
-    return CurdleproofsCrs.new(ell, N_BLINDERS)
+def generate_random_crs(n: int) -> CurdleproofsCrs:
+    return CurdleproofsCrs.new(n, N_BLINDERS)
 
 
 def generate_random_trackers(n: int) -> List[WhiskTracker]:
