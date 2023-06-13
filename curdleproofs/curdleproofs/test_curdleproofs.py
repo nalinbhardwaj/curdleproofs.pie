@@ -648,16 +648,25 @@ def test_serde_shuffle_proof():
         vec_m_blinders=vec_m_blinders,
     )
 
-    shuffle_proof_bytes = shuffle_proof.to_bytes()
 
     # Assert individual properties first
-    assert GroupCommitment.from_bytes(BufReader(shuffle_proof.cm_T.to_bytes())).to_json() == shuffle_proof.cm_T.to_json()
-    assert GroupCommitment.from_bytes(BufReader(shuffle_proof.cm_U.to_bytes())).to_json() == shuffle_proof.cm_U.to_json()
-    assert SamePermutationProof.from_bytes(BufReader(shuffle_proof.same_scalar_proof.to_bytes()), ell).to_json() == shuffle_proof.same_scalar_proof.to_json()
-    assert SameScalarProof.from_bytes(BufReader(shuffle_proof.same_scalar_proof.to_bytes())).to_json() == shuffle_proof.same_scalar_proof.to_json()
-    assert SameMSMProof.from_bytes(BufReader(shuffle_proof.same_msm_proof.to_bytes())).to_json() == shuffle_proof.same_msm_proof.to_json()
+    ipa_proof = shuffle_proof.same_perm_proof.grand_prod_proof.ipa_proof
+    assert_json(IPA.from_bytes(BufReader(ipa_proof.to_bytes()), N), ipa_proof)
+    assert_json(GroupCommitment.from_bytes(BufReader(shuffle_proof.cm_T.to_bytes())), shuffle_proof.cm_T)
+    assert_json(GroupCommitment.from_bytes(BufReader(shuffle_proof.cm_U.to_bytes())), shuffle_proof.cm_U)
+    assert_json(SamePermutationProof.from_bytes(BufReader(shuffle_proof.same_perm_proof.to_bytes()), N), shuffle_proof.same_perm_proof)
+    assert_json(SameScalarProof.from_bytes(BufReader(shuffle_proof.same_scalar_proof.to_bytes())), shuffle_proof.same_scalar_proof)
+    assert_json(SameMSMProof.from_bytes(BufReader(shuffle_proof.same_msm_proof.to_bytes()), N), shuffle_proof.same_msm_proof)
+    # Full proof
+    assert_json(CurdleProofsProof.from_bytes(BufReader(shuffle_proof.to_bytes()), N), shuffle_proof)
 
-    assert CurdleProofsProof.from_bytes(BufReader(shuffle_proof_bytes), ell).to_json() == shuffle_proof.to_json()
+def assert_json(a, b):
+    a_json = a.to_json()
+    b_json = b.to_json()
+    if a_json != b_json:
+        print("A", json.dumps(a_json, indent=2))
+        print("B", json.dumps(b_json, indent=2))
+    assert a_json == b_json
 
 
 def generate_random_k() -> Fr:
@@ -682,8 +691,8 @@ def generate_random_crs(ell: int) -> CurdleproofsCrs:
 def generate_random_trackers(n: int) -> List[WhiskTracker]:
     return [generate_tracker(generate_random_k()) for _ in range(n)]
 
-def crs_to_json(crs: CurdleproofsCrs) -> str:
-    dic = {
+def crs_to_json(crs: CurdleproofsCrs):
+    return {
         "vec_G": [point_projective_to_json(g) for g in crs.vec_G],
         "vec_H": [point_projective_to_json(h) for h in crs.vec_H],
         "H": point_projective_to_json(crs.H),
@@ -692,4 +701,3 @@ def crs_to_json(crs: CurdleproofsCrs) -> str:
         "G_sum": point_projective_to_json(crs.G_sum),
         "H_sum": point_projective_to_json(crs.H_sum),
     }
-    return json.dumps(dic)
