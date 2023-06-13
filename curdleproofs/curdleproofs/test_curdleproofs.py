@@ -44,7 +44,6 @@ from curdleproofs.same_msm import SameMSMProof
 from curdleproofs.commitment import GroupCommitment
 from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.curdleproofs import (
-    N_BLINDERS,
     CurdleProofsProof,
     shuffle_permute_and_commit_input,
 )
@@ -434,6 +433,7 @@ def test_group_commit():
 
 def test_shuffle_argument():
     N = 64
+    N_BLINDERS = 4
     ell = N - N_BLINDERS
 
     crs = CurdleproofsCrs.new(ell, N_BLINDERS)
@@ -473,6 +473,7 @@ def test_shuffle_argument():
 
 def test_bad_shuffle_argument():
     N = 128
+    N_BLINDERS = 4
     ell = N - N_BLINDERS
 
     crs = CurdleproofsCrs.new(ell, N_BLINDERS)
@@ -581,10 +582,33 @@ def test_whisk_interface_tracker_opening_proof_identity():
     assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
 
 
-def test_whisk_interface_shuffle_proof():
-    N = 64
-    ell = N - N_BLINDERS
-    crs = generate_random_crs(ell)
+def test_whisk_interface_shuffle_proof_4_2():
+    whisk_interface_shuffle_proof_n(4, 2)
+
+# def test_whisk_interface_shuffle_proof_4_1():
+#     whisk_interface_shuffle_proof_n(4, 1)
+
+# def test_whisk_interface_shuffle_proof_4_4():
+#     whisk_interface_shuffle_proof_n(4, 4)
+
+def test_whisk_interface_shuffle_proof_8_2():
+    whisk_interface_shuffle_proof_n(8, 2)
+
+def test_whisk_interface_shuffle_proof_8_4():
+    whisk_interface_shuffle_proof_n(8, 4)
+
+def test_whisk_interface_shuffle_proof_16_4():
+    whisk_interface_shuffle_proof_n(16, 4)
+
+def test_whisk_interface_shuffle_proof_32_4():
+    whisk_interface_shuffle_proof_n(32, 4)
+
+def test_whisk_interface_shuffle_proof_64_4():
+    whisk_interface_shuffle_proof_n(64, 4)
+
+def whisk_interface_shuffle_proof_n(n: int, n_blinders: int):
+    ell = n - n_blinders
+    crs = CurdleproofsCrs.new(ell, n_blinders)
     pre_trackers = generate_random_trackers(ell)
     post_trackers, m, shuffle_proof = GenerateWhiskShuffleProof(crs, pre_trackers)
     assert IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, m, shuffle_proof)
@@ -599,6 +623,7 @@ def test_serde_g1_generator():
 
 def test_serde_crs():
     N = 64
+    N_BLINDERS = 4
     crs = CurdleproofsCrs.new(N, N_BLINDERS)
     crs_bytes = crs.to_bytes()
     assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(BufReader(crs_bytes), N, N_BLINDERS))
@@ -616,10 +641,11 @@ def test_serde_tracker_proof():
 
 def test_serde_shuffle_proof():
     N = 64
+    N_BLINDERS = 4
     ell = N - N_BLINDERS
-    crs = generate_random_crs(N)
+    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
     pre_shuffle_trackers = generate_random_trackers(ell)
-    permutation = list(range(len(crs.vec_G)))
+    permutation = list(range(len(crs.n_el())))
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
@@ -676,10 +702,6 @@ def generate_tracker(k: Fr) -> WhiskTracker:
     r_G = multiply(G1, int(r))
     k_r_G = multiply(r_G, int(k))
     return WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G))
-
-
-def generate_random_crs(n: int) -> CurdleproofsCrs:
-    return CurdleproofsCrs.new(n, N_BLINDERS)
 
 
 def generate_random_trackers(n: int) -> List[WhiskTracker]:

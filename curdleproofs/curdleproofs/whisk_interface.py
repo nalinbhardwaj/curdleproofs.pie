@@ -2,7 +2,6 @@ import random
 from typing import Container, Sequence, Tuple, NewType
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.curdleproofs import (
-    N_BLINDERS,
     CurdleProofsProof,
     shuffle_permute_and_commit_input,
 )
@@ -51,10 +50,7 @@ def IsValidWhiskShuffleProof(
     vec_T = [pubkey_to_G1(tracker.r_G) for tracker in post_shuffle_trackers]
     vec_U = [pubkey_to_G1(tracker.k_r_G) for tracker in post_shuffle_trackers]
 
-    ell = len(crs.vec_G)
-    n_blinders = len(crs.vec_H)
-    n = ell + n_blinders
-
+    n = crs.n_el() + crs.n_blinders()
     shuffle_proof_instance = CurdleProofsProof.from_bytes(BufReader(shuffle_proof), n)
     M = pubkey_to_G1(m)
 
@@ -64,7 +60,7 @@ def IsValidWhiskShuffleProof(
 def GenerateWhiskShuffleProof(
     crs: CurdleproofsCrs, pre_shuffle_trackers: Sequence[WhiskTracker]
 ) -> Tuple[Sequence[WhiskTracker], BLSPubkey, SerializedCurdleProofsProof]:
-    permutation = list(range(len(crs.vec_G)))
+    permutation = list(range(crs.n_el()))
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 

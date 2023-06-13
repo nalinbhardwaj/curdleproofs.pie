@@ -47,33 +47,31 @@ class CurdleproofsCrs:
         self.H_sum = H_sum
 
     @classmethod
-    def new(cls: Type[T_CurdleproofsCrs], n: int, n_blinders: int) -> T_CurdleproofsCrs:
-        count = min_poins_required(n)
+    def new(cls: Type[T_CurdleproofsCrs], n_el: int, n_blinders: int) -> T_CurdleproofsCrs:
+        count = min_poins_required(n_el, n_blinders)
         points: List[PointProjective] = [get_random_point() for _ in range(0, count)]
-        return cls.from_points(n, n_blinders, points)
+        return cls.from_points(n_el, n_blinders, points)
     
     @classmethod
-    def from_points_compressed(cls: Type[T_CurdleproofsCrs], n: int, n_blinders: int, points_compressed: List[BLSPubkey]) -> T_CurdleproofsCrs:
-        count = min_poins_required(n)
+    def from_points_compressed(cls: Type[T_CurdleproofsCrs], n_el: int, n_blinders: int, points_compressed: List[BLSPubkey]) -> T_CurdleproofsCrs:
+        count = min_poins_required(n_el, n_blinders)
         points = [pubkey_to_G1(BLSPubkey(p)) for p in points_compressed[0:min(count, len(points_compressed))]]
-        return cls.from_points(n, n_blinders, points)
+        return cls.from_points(n_el, n_blinders, points)
     
     @classmethod
-    def from_points(cls: Type[T_CurdleproofsCrs], n: int, n_blinders: int, points: List[PointProjective]) -> T_CurdleproofsCrs:
-        count = min_poins_required(n)
+    def from_points(cls: Type[T_CurdleproofsCrs], n_el: int, n_blinders: int, points: List[PointProjective]) -> T_CurdleproofsCrs:
+        count = min_poins_required(n_el, n_blinders)
         if len(points) < count:
             raise Exception("not min points required", count, len(points))
-        if n_blinders >= n:
-            raise Exception("n_blinders >= n")
 
-        vec_G = points[0:n - n_blinders]
-        vec_H = points[n - n_blinders:n]
+        vec_G = points[0:n_el]
+        vec_H = points[n_el:n_el + n_blinders]
         return cls(
             vec_G=vec_G,
             vec_H=vec_H,
-            H=points[n + 0],
-            G_t=points[n + 1],
-            G_u=points[n + 2],
+            H=points[n_el + n_blinders + 0],
+            G_t=points[n_el + n_blinders + 1],
+            G_u=points[n_el + n_blinders + 2],
             G_sum=reduce(add, vec_G, Z1),
             H_sum=reduce(add, vec_H, Z1),
         )
@@ -90,9 +88,9 @@ class CurdleproofsCrs:
         ])
     
     @classmethod
-    def from_bytes(cls: Type[T_CurdleproofsCrs], b: BufReader, n: int, n_blinders: int) -> T_CurdleproofsCrs:
+    def from_bytes(cls: Type[T_CurdleproofsCrs], b: BufReader, n_el: int, n_blinders: int) -> T_CurdleproofsCrs:
         return cls(
-            vec_G=[b.read_g1() for _ in range(0, n - n_blinders)],
+            vec_G=[b.read_g1() for _ in range(0, n_el)],
             vec_H=[b.read_g1() for _ in range(0, n_blinders)],
             H=b.read_g1(),
             G_t=b.read_g1(),
@@ -100,6 +98,12 @@ class CurdleproofsCrs:
             G_sum=b.read_g1(),
             H_sum=b.read_g1(),
         )
+    
+    def n_el(self) -> int:
+        return len(self.vec_G)
+    
+    def n_blinders(self) -> int:
+        return len(self.vec_H)
 
-def min_poins_required(n: int) -> int:
-    return n + 3
+def min_poins_required(n_el: int, n_blinders: int) -> int:
+    return n_el + n_blinders + 3

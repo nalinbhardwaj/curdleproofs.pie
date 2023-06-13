@@ -59,7 +59,6 @@ class GrandProductProof:
     ) -> Tuple[Optional[T_GrandProductProof], Optional[str]]:
         n_blinders = len(vec_b_blinders)
         ell = len(crs_G_vec)
-        n = ell + n_blinders
 
         transcript.append(b"gprod_step1", point_projective_to_bytes(B))
         transcript.append(b"gprod_step1", field_to_bytes(gprod_result))

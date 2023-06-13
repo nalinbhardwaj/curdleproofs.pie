@@ -42,8 +42,6 @@ from curdleproofs.commitment import GroupCommitment
 from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
 from eth_typing import BLSPubkey
 
-N_BLINDERS = 4
-
 T_CurdleProofsProof = TypeVar("T_CurdleProofsProof", bound="CurdleProofsProof")
 
 
@@ -91,7 +89,7 @@ class CurdleProofsProof:
         transcript.append(b"curdleproofs_step1", point_projective_to_bytes(M))
         vec_a = transcript.get_and_append_challenges(b"curdleproofs_vec_a", ell)
 
-        vec_a_blinders = generate_blinders(N_BLINDERS - 2)
+        vec_a_blinders = generate_blinders(crs.n_blinders() - 2)
         vec_r_a_prime = vec_a_blinders + [Fr.zero(), Fr.zero()]
         vec_a_permuted = get_permutation(vec_a, permutation)
 
@@ -145,7 +143,7 @@ class CurdleProofsProof:
         A_prime = add(add(A, cm_T.T_1), cm_U.T_1)
 
         vec_G_with_blinders = (
-            crs.vec_G + crs.vec_H[: (N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
+            crs.vec_G + crs.vec_H[: (crs.n_blinders() - 2)] + [crs.G_t, crs.G_u]
         )
 
         vec_T_with_blinders = vec_T + [
@@ -218,7 +216,7 @@ class CurdleProofsProof:
             A=self.A,
             M=M,
             vec_a=vec_a,
-            n_blinders=N_BLINDERS,
+            n_blinders=crs.n_blinders(),
             transcript=transcript,
             msm_accumulator=msm_accumulator,
         )
@@ -237,7 +235,7 @@ class CurdleProofsProof:
         A_prime = add(add(self.A, self.cm_T.T_1), self.cm_U.T_1)
 
         vec_G_with_blinders = (
-            crs.vec_G + crs.vec_H[: (N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
+            crs.vec_G + crs.vec_H[: (crs.n_blinders() - 2)] + [crs.G_t, crs.G_u]
         )
 
         vec_T_with_blinders = vec_T + [
@@ -347,7 +345,7 @@ def shuffle_permute_and_commit_input(
     range_as_fr = [Fr(i) for i in range(ell)]
     sigma_ell = get_permutation(range_as_fr, permutation)
 
-    vec_m_blinders = generate_blinders(N_BLINDERS)
+    vec_m_blinders = generate_blinders(crs.n_blinders())
     M = add(compute_MSM(crs.vec_G, sigma_ell), compute_MSM(crs.vec_H, vec_m_blinders))
 
     return vec_T, vec_U, M, vec_m_blinders
