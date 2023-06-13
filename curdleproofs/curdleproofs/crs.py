@@ -1,5 +1,5 @@
 from functools import reduce
-import json
+from math import log2
 from random import randint
 from typing import List, Type, TypeVar
 from py_ecc.optimized_bls12_381.optimized_curve import (
@@ -63,6 +63,10 @@ class CurdleproofsCrs:
         count = min_poins_required(n_el, n_blinders)
         if len(points) < count:
             raise Exception("not min points required", count, len(points))
+        
+        n = n_el + n_blinders
+        if n != 2**int(log2(n)):
+            raise Exception("n_el + n_blinders not a power of 2, n_el={} n_blinders={}".format(n_el, n_blinders))
 
         vec_G = points[0:n_el]
         vec_H = points[n_el:n_el + n_blinders]

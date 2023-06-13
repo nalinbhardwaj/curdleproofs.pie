@@ -105,7 +105,7 @@ class IPA:
         n = len(vec_c)
         lg_n = int(log2(n))
         if n != 2**lg_n:
-            return (None, "n != 2 ** lg_n, not a power of 2")
+            return (None, "n != 2 ** lg_n, {} not a power of 2".format(n))
         if n != len(vec_d):
             return (None, "len(vec_c) != len(vec_d)")
 
