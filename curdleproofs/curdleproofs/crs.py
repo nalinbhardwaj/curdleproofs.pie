@@ -48,23 +48,22 @@ class CurdleproofsCrs:
     def new(
         cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int
     ) -> T_CurdleproofsCrs:
-        vec_G: List[PointProjective] = [get_random_point() for i in range(0, ell)]
-        vec_H: List[PointProjective] = [
-            get_random_point() for i in range(0, n_blinders)
-        ]
-        H: PointProjective = get_random_point()
-        G_t: PointProjective = get_random_point()
-        G_u: PointProjective = get_random_point()
-        G_sum: PointProjective = reduce(add, vec_G, Z1)
-        H_sum: PointProjective = reduce(add, vec_H, Z1)
+        count = ell + n_blinders + 3
+        points: List[PointProjective] = [get_random_point() for _ in range(0, count)]
+        return cls.from_random_points(ell, n_blinders, points)
+
+    @classmethod
+    def from_random_points(cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int, points: List[PointProjective]) -> T_CurdleproofsCrs:
+        vec_G = points[0:ell]
+        vec_H = points[ell:ell+n_blinders]
         return cls(
             vec_G=vec_G,
             vec_H=vec_H,
-            H=H,
-            G_t=G_t,
-            G_u=G_u,
-            G_sum=G_sum,
-            H_sum=H_sum,
+            H=points[ell+n_blinders + 1],
+            G_t=points[ell+n_blinders + 1],
+            G_u=points[ell+n_blinders + 2],
+            G_sum=reduce(add, vec_G, Z1),
+            H_sum=reduce(add, vec_H, Z1),
         )
 
     def to_bytes(self) -> bytes:
