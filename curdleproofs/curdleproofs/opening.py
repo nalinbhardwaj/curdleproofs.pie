@@ -92,13 +92,12 @@ class TrackerOpeningProof:
 
         return eq(Aprime, self.A) and eq(Bprime, self.B)
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "A": point_projective_to_json(self.A),
             "B": point_projective_to_json(self.B),
             "s": field_to_json(self.s),
         }
-        return json.dumps(dic)
 
     def to_bytes(self) -> bytes:
         return b''.join([

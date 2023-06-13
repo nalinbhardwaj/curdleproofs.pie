@@ -210,21 +210,19 @@ class GrandProductProof:
 
         return True, ""
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "C": point_projective_to_json(self.C),
             "r_p": field_to_json(self.r_p),
             "ipa_proof": self.ipa_proof.to_json(),
         }
-        return json.dumps(dic)
 
     @classmethod
-    def from_json(cls: Type[T_GrandProductProof], json_str: str) -> T_GrandProductProof:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_GrandProductProof], json) -> T_GrandProductProof:
         return cls(
-            C=point_projective_from_json(dic["C"]),
-            r_p=field_from_json(dic["r_p"], Fr),
-            ipa_proof=IPA.from_json(dic["ipa_proof"]),
+            C=point_projective_from_json(json["C"]),
+            r_p=field_from_json(json["r_p"], Fr),
+            ipa_proof=IPA.from_json(json["ipa_proof"]),
         )
     
     def to_bytes(self) -> bytes:

@@ -133,25 +133,23 @@ class SameScalarProof:
         else:
             return (False, "Failure")
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "cm_A": self.cm_A.to_json(),
             "cm_B": self.cm_B.to_json(),
             "z_k": field_to_json(self.z_k),
             "z_t": field_to_json(self.z_t),
             "z_u": field_to_json(self.z_u),
         }
-        return json.dumps(dic)
 
     @classmethod
-    def from_json(cls: Type[T_SameScalarProof], json_str: str) -> T_SameScalarProof:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_SameScalarProof], json) -> T_SameScalarProof:
         return cls(
-            cm_A=GroupCommitment.from_json(dic["cm_A"]),
-            cm_B=GroupCommitment.from_json(dic["cm_B"]),
-            z_k=field_from_json(dic["z_k"], Fr),
-            z_t=field_from_json(dic["z_t"], Fr),
-            z_u=field_from_json(dic["z_u"], Fr),
+            cm_A=GroupCommitment.from_json(json["cm_A"]),
+            cm_B=GroupCommitment.from_json(json["cm_B"]),
+            z_k=field_from_json(json["z_k"], Fr),
+            z_t=field_from_json(json["z_t"], Fr),
+            z_u=field_from_json(json["z_u"], Fr),
         )
     
     def to_bytes(self) -> bytes:

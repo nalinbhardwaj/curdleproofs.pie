@@ -264,8 +264,8 @@ class IPA:
 
         return (True, "")
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "B_c": point_projective_to_json(self.B_c),
             "B_d": point_projective_to_json(self.B_d),
             "vec_L_C": [point_projective_to_json(p) for p in self.vec_L_C],
@@ -275,20 +275,18 @@ class IPA:
             "c_final": field_to_json(self.c_final),
             "d_final": field_to_json(self.d_final),
         }
-        return json.dumps(dic)
 
     @classmethod
-    def from_json(cls: Type[T_IPA], json_str: str) -> T_IPA:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_IPA], json) -> T_IPA:
         return cls(
-            B_c=point_projective_from_json(dic["B_c"]),
-            B_d=point_projective_from_json(dic["B_d"]),
-            vec_L_C=[point_projective_from_json(p) for p in dic["vec_L_C"]],
-            vec_R_C=[point_projective_from_json(p) for p in dic["vec_R_C"]],
-            vec_L_D=[point_projective_from_json(p) for p in dic["vec_L_D"]],
-            vec_R_D=[point_projective_from_json(p) for p in dic["vec_R_D"]],
-            c_final=field_from_json(dic["c_final"], Fr),
-            d_final=field_from_json(dic["d_final"], Fr),
+            B_c=point_projective_from_json(json["B_c"]),
+            B_d=point_projective_from_json(json["B_d"]),
+            vec_L_C=[point_projective_from_json(p) for p in json["vec_L_C"]],
+            vec_R_C=[point_projective_from_json(p) for p in json["vec_R_C"]],
+            vec_L_D=[point_projective_from_json(p) for p in json["vec_L_D"]],
+            vec_R_D=[point_projective_from_json(p) for p in json["vec_R_D"]],
+            c_final=field_from_json(json["c_final"], Fr),
+            d_final=field_from_json(json["d_final"], Fr),
         )
     
     def to_bytes(self) -> bytes:
