@@ -17,6 +17,8 @@ from curdleproofs.util import (
     point_projective_from_json,
     point_projective_to_json,
 )
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
 
 T_CurdleproofsCrs = TypeVar("T_CurdleproofsCrs", bound="CurdleproofsCrs")
 
@@ -63,27 +65,29 @@ class CurdleproofsCrs:
             H_sum=H_sum,
         )
 
-    def to_json(self) -> str:
-        dic = {
-            "vec_G": [point_projective_to_json(g) for g in self.vec_G],
-            "vec_H": [point_projective_to_json(h) for h in self.vec_H],
-            "H": point_projective_to_json(self.H),
-            "G_t": point_projective_to_json(self.G_t),
-            "G_u": point_projective_to_json(self.G_u),
-            "G_sum": point_projective_to_json(self.G_sum),
-            "H_sum": point_projective_to_json(self.H_sum),
-        }
-        return json.dumps(dic)
-
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            b''.join([G1_to_pubkey(g) for g in self.vec_G]),
+            b''.join([G1_to_pubkey(h) for h in self.vec_H]),
+            G1_to_pubkey(self.H),
+            G1_to_pubkey(self.G_t),
+            G1_to_pubkey(self.G_u),
+            G1_to_pubkey(self.G_sum),
+            G1_to_pubkey(self.H_sum),
+        ])
+    
     @classmethod
-    def from_json(cls: Type[T_CurdleproofsCrs], json_str: str) -> T_CurdleproofsCrs:
-        dic = json.loads(json_str)
+    def from_bytes(cls: Type[T_CurdleproofsCrs], b: bytes, ell: int, n_blinders: int) -> T_CurdleproofsCrs:
+        def read_g1_point(i: int) -> PointProjective:
+            return pubkey_to_G1(BLSPubkey(b[48 * i:48 * (i + 1)]))
+        
         return cls(
-            vec_G=[point_projective_from_json(g) for g in dic["vec_G"]],
-            vec_H=[point_projective_from_json(h) for h in dic["vec_H"]],
-            H=point_projective_from_json(dic["H"]),
-            G_t=point_projective_from_json(dic["G_t"]),
-            G_u=point_projective_from_json(dic["G_u"]),
-            G_sum=point_projective_from_json(dic["G_sum"]),
-            H_sum=point_projective_from_json(dic["H_sum"]),
+            vec_G=[read_g1_point(i) for i in range(0, ell)],
+            vec_H=[read_g1_point(ell + i) for i in range(0, n_blinders)],
+            H=read_g1_point(ell + n_blinders),
+            G_t=read_g1_point(ell + n_blinders + 1),
+            G_u=read_g1_point(ell + n_blinders + 2),
+            G_sum=read_g1_point(ell + n_blinders + 3),
+            H_sum=read_g1_point(ell + n_blinders + 4),
         )
+

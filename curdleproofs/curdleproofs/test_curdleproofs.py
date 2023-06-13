@@ -1,5 +1,6 @@
 from functools import reduce
 from math import log2
+import json
 import operator
 import random
 from curdleproofs.crs import CurdleproofsCrs
@@ -11,6 +12,7 @@ from curdleproofs.util import (
     point_projective_to_bytes,
     points_affine_to_bytes,
     points_projective_to_bytes,
+    point_projective_to_json,
     get_random_point,
     get_permutation,
 )
@@ -666,6 +668,14 @@ def test_serde_g1_generator():
     assert g1_b == G1
 
 
+def test_serde_crs():
+    N = 64
+    ell = N - N_BLINDERS
+    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
+    crs_bytes = crs.to_bytes()
+    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(crs_bytes, ell, N_BLINDERS))
+
+
 def generate_random_k() -> Fr:
     return generate_blinders(1)[0]
 
@@ -687,3 +697,15 @@ def generate_random_crs(ell: int) -> CurdleproofsCrs:
 
 def generate_random_trackers(n: int) -> List[WhiskTracker]:
     return [generate_tracker(generate_random_k()) for _ in range(n)]
+
+def crs_to_json(crs: CurdleproofsCrs) -> str:
+    dic = {
+        "vec_G": [point_projective_to_json(g) for g in crs.vec_G],
+        "vec_H": [point_projective_to_json(h) for h in crs.vec_H],
+        "H": point_projective_to_json(crs.H),
+        "G_t": point_projective_to_json(crs.G_t),
+        "G_u": point_projective_to_json(crs.G_u),
+        "G_sum": point_projective_to_json(crs.G_sum),
+        "H_sum": point_projective_to_json(crs.H_sum),
+    }
+    return json.dumps(dic)
