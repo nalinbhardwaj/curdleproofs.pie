@@ -14,6 +14,12 @@ from curdleproofs.util import (
     get_random_point,
     generate_blinders,
     get_verification_scalars_bitstring,
+    g1_from_bytes,
+    BufReader,
+    g1_to_bytes,
+    fr_to_bytes,
+    g1_list_to_bytes,
+    log2_int,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
@@ -27,6 +33,8 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     add,
     neg,
 )
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
 
 T_SameMSMProof = TypeVar("T_SameMSMProof", bound="SameMSMProof")
 
@@ -275,4 +283,34 @@ class SameMSMProof:
             vec_R_T=[point_projective_from_json(R_T) for R_T in json["vec_R_T"]],
             vec_R_U=[point_projective_from_json(R_U) for R_U in json["vec_R_U"]],
             x_final=field_from_json(json["x_final"], Fr),
+        )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.B_a),
+            g1_to_bytes(self.B_t),
+            g1_to_bytes(self.B_u),
+            g1_list_to_bytes(self.vec_L_A),
+            g1_list_to_bytes(self.vec_L_T),
+            g1_list_to_bytes(self.vec_L_U),
+            g1_list_to_bytes(self.vec_R_A),
+            g1_list_to_bytes(self.vec_R_T),
+            g1_list_to_bytes(self.vec_R_U),
+            fr_to_bytes(self.x_final),
+        ])
+    
+    @classmethod
+    def from_bytes(cls: Type[T_SameMSMProof], b: BufReader, n: int) -> T_SameMSMProof:
+        log2_n = log2_int(n)
+        return cls(
+            B_a=b.read_g1(),
+            B_t=b.read_g1(),
+            B_u=b.read_g1(),
+            vec_L_A=[b.read_g1() for _ in range(0, log2_n)],
+            vec_L_T=[b.read_g1() for _ in range(0, log2_n)],
+            vec_L_U=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_A=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_T=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_U=[b.read_g1() for _ in range(0, log2_n)],
+            x_final=b.read_fr(),
         )

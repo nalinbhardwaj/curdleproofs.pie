@@ -9,6 +9,9 @@ from curdleproofs.util import (
     get_random_point,
     point_projective_from_json,
     point_projective_to_json,
+    point_projective_to_bytes,
+    BufReader,
+    g1_to_bytes,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
@@ -69,4 +72,17 @@ class GroupCommitment:
         return cls(
             T_1=point_projective_from_json(json["T_1"]),
             T_2=point_projective_from_json(json["T_2"]),
+        )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.T_1),
+            g1_to_bytes(self.T_2),
+        ])
+    
+    @classmethod
+    def from_bytes(cls: Type[T_GroupCommitment], b: BufReader) -> T_GroupCommitment:
+        return cls(
+            T_1=b.read_g1(),
+            T_2=b.read_g1(),
         )
