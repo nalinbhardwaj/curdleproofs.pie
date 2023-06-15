@@ -1,5 +1,6 @@
 import random
-from typing import Container, Sequence, Tuple
+import json
+from typing import Container, Sequence, Tuple, Type, TypeVar
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.curdleproofs import (
     N_BLINDERS,
@@ -10,7 +11,10 @@ from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from curdleproofs.opening import TrackerOpeningProof
 from curdleproofs.util import (
     PointAffine as BLSG1Point,
+    PointProjective,
     affine_to_projective,
+    point_projective_to_json,
+    point_projective_from_json,
     Fr,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize
@@ -24,16 +28,38 @@ class WhiskTracker:
         self.r_G = r_G
         self.k_r_G = k_r_G
 
+T_WhiskShuffleProof = TypeVar("T_WhiskShuffleProof", bound="WhiskShuffleProof")
 
-SerializedCurdleProofsProof = bytes
+class WhiskShuffleProof:
+    M: PointProjective
+    proof: CurdleProofsProof
+
+    def __init__(self, M: PointProjective, proof: CurdleProofsProof):
+        self.M = M
+        self.proof = proof
+
+    def to_json(self):
+        return {
+            "M": point_projective_to_json(self.M),
+            "proof": self.proof.to_json(),
+        }
+
+    @classmethod
+    def from_json(cls: Type[T_WhiskShuffleProof], data) -> T_WhiskShuffleProof:
+        return cls(
+            M=point_projective_from_json(data["M"]),
+            proof=CurdleProofsProof.from_json(data["proof"]),
+        )
+
+
+WhiskShuffleProofBytes = bytes
 
 
 def IsValidWhiskShuffleProof(
     crs: CurdleproofsCrs,
     pre_shuffle_trackers: Sequence[WhiskTracker],
     post_shuffle_trackers: Sequence[WhiskTracker],
-    m: BLSG1Point,
-    shuffle_proof: SerializedCurdleProofsProof,
+    whisk_shuffle_proof_bytes: WhiskShuffleProofBytes,
 ) -> Tuple[bool, str]:
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
@@ -44,15 +70,14 @@ def IsValidWhiskShuffleProof(
     vec_T = [tracker.r_G for tracker in post_shuffle_trackers]
     vec_U = [tracker.k_r_G for tracker in post_shuffle_trackers]
 
-    shuffle_proof_instance = CurdleProofsProof.from_json(shuffle_proof.decode())
-    M = affine_to_projective(m)
+    whisk_shuffle_proof = WhiskShuffleProof.from_json(json.loads(whisk_shuffle_proof_bytes.decode()))
 
-    return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
+    return whisk_shuffle_proof.proof.verify(crs, vec_R, vec_S, vec_T, vec_U, whisk_shuffle_proof.M)
 
 
 def GenerateWhiskShuffleProof(
     crs: CurdleproofsCrs, pre_shuffle_trackers: Sequence[WhiskTracker]
-) -> Tuple[Sequence[WhiskTracker], BLSG1Point, SerializedCurdleProofsProof]:
+) -> Tuple[Sequence[WhiskTracker], WhiskShuffleProofBytes]:
     permutation = list(range(len(crs.vec_G)))
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
@@ -75,10 +100,11 @@ def GenerateWhiskShuffleProof(
         k=k,
         vec_m_blinders=vec_m_blinders,
     )
+    whisk_shuffle_proof = WhiskShuffleProof(M, shuffle_proof)
 
     post_trackers = [WhiskTracker(r_G, k_r_G) for r_G, k_r_G in zip(vec_T, vec_U)]
 
-    return post_trackers, normalize(M), shuffle_proof.to_json().encode()
+    return post_trackers, json.dumps(whisk_shuffle_proof.to_json()).encode()
 
 
 SerializedWhiskTrackerProof = bytes
