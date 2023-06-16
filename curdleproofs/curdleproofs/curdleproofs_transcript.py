@@ -16,8 +16,11 @@ class CurdleproofsTranscript(MerlinTranscript):
 
     def get_and_append_challenge(self, label: bytes) -> Fr:
         while True:
-            challenge_bytes = self.challenge_bytes(label, 255)
-            f = Fr(bytes_to_int(challenge_bytes))
+            challenge_bytes = self.challenge_bytes(label, 32)
+            challenge_int = bytes_to_int(challenge_bytes)
+            if challenge_int >= curve_order:
+                continue
+            f = Fr(challenge_int)
             if f != Fr.zero():
                 self.append(label, challenge_bytes)
                 return f
