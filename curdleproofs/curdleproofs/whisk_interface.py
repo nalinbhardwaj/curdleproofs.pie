@@ -13,7 +13,7 @@ from curdleproofs.util import (
     affine_to_projective,
     Fr,
 )
-from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize
+from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize, multiply
 
 
 class WhiskTracker:
@@ -105,14 +105,13 @@ def IsValidWhiskOpeningProof(
 
 def GenerateWhiskTrackerProof(
     tracker: WhiskTracker,
-    k_G: BLSG1Point,
     k: Fr,
 ) -> SerializedWhiskTrackerProof:
     transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
     opening_proof = TrackerOpeningProof.new(
         k_r_G=affine_to_projective(tracker.k_r_G),
         r_G=affine_to_projective(tracker.r_G),
-        k_G=affine_to_projective(k_G),
+        k_G=multiply(G1, int(k)),
         G=G1,
         k=k,
         transcript=transcript_prover,
