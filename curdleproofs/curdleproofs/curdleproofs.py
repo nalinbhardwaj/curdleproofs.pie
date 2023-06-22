@@ -98,7 +98,7 @@ class CurdleProofsProof:
             compute_MSM(crs.vec_H, vec_r_a_prime),
         )
 
-        (same_perm_proof, err) = SamePermutationProof.new(
+        same_perm_proof = SamePermutationProof.new(
             crs_G_vec=crs.vec_G,
             crs_H_vec=crs.vec_H,
             crs_U=crs.H,
@@ -110,9 +110,6 @@ class CurdleProofsProof:
             vec_m_blinders=vec_m_blinders,
             transcript=transcript,
         )
-
-        if same_perm_proof is None:
-            raise Exception(err)
 
         r_t = Fr(random.randint(1, Fr.field_modulus))
         r_u = Fr(random.randint(1, Fr.field_modulus))
@@ -192,14 +189,14 @@ class CurdleProofsProof:
         vec_T: List[PointProjective],
         vec_U: List[PointProjective],
         M: PointProjective,
-    ) -> Tuple[bool, str]:
+    ):
         ell = len(vec_R)
 
         transcript = CurdleproofsTranscript(b"curdleproofs")
         msm_accumulator = MSMAccumulator()
 
         if is_inf(vec_T[0]):
-            return False, "vec_T[0] is infinity"
+            raise Exception("vec_T[0] is infinity")
 
         transcript.append_list(
             b"curdleproofs_step1", points_projective_to_bytes(vec_R + vec_S + vec_T + vec_U)
@@ -270,10 +267,7 @@ class CurdleProofsProof:
             self.S, vec_S, vec_a
         )
 
-        msm_verify = msm_accumulator.verify()
-
-        if not msm_verify:
-            return False, "MSM check failed"
+        msm_accumulator.verify()
 
         return True, ""
 

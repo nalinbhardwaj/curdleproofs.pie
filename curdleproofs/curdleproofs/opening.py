@@ -78,7 +78,7 @@ class TrackerOpeningProof:
         k_r_G: PointProjective,
         r_G: PointProjective,
         k_G: PointProjective,
-    ) -> bool:
+    ):
         transcript.append_list(
             b"tracker_opening_proof",
             points_projective_to_bytes([k_G, G1, k_r_G, r_G, self.A, self.B]),
@@ -90,7 +90,7 @@ class TrackerOpeningProof:
         Aprime = add(multiply(G1, int(self.s)), multiply(k_G, int(challenge)))
         Bprime = add(multiply(r_G, int(self.s)), multiply(k_r_G, int(challenge)))
 
-        return eq(Aprime, self.A) and eq(Bprime, self.B)
+        assert eq(Aprime, self.A) and eq(Bprime, self.B)
 
     def to_json(self):
         return {

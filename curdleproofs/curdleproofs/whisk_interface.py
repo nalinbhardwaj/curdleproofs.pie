@@ -40,21 +40,25 @@ def IsValidWhiskShuffleProof(
     post_shuffle_trackers: Sequence[WhiskTracker],
     m: BLSPubkey,
     shuffle_proof: SerializedCurdleProofsProof,
-) -> Tuple[bool, str]:
+) -> bool:
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
     """
-    vec_R = [pubkey_to_G1(tracker.r_G) for tracker in pre_shuffle_trackers]
-    vec_S = [pubkey_to_G1(tracker.k_r_G) for tracker in pre_shuffle_trackers]
+    try:
+        vec_R = [pubkey_to_G1(tracker.r_G) for tracker in pre_shuffle_trackers]
+        vec_S = [pubkey_to_G1(tracker.k_r_G) for tracker in pre_shuffle_trackers]
 
-    vec_T = [pubkey_to_G1(tracker.r_G) for tracker in post_shuffle_trackers]
-    vec_U = [pubkey_to_G1(tracker.k_r_G) for tracker in post_shuffle_trackers]
+        vec_T = [pubkey_to_G1(tracker.r_G) for tracker in post_shuffle_trackers]
+        vec_U = [pubkey_to_G1(tracker.k_r_G) for tracker in post_shuffle_trackers]
 
-    n = crs.n_el() + crs.n_blinders()
-    shuffle_proof_instance = CurdleProofsProof.from_bytes(BufReader(shuffle_proof), n)
-    M = pubkey_to_G1(m)
+        n = crs.n_el() + crs.n_blinders()
+        shuffle_proof_instance = CurdleProofsProof.from_bytes(BufReader(shuffle_proof), n)
+        M = pubkey_to_G1(m)
 
-    return shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
+        shuffle_proof_instance.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
+        return True
+    except:  # noqa: E722
+        return False
 
 
 def GenerateWhiskShuffleProof(
@@ -71,7 +75,7 @@ def GenerateWhiskShuffleProof(
         crs, vec_R, vec_S, permutation, k
     )
 
-    shuffle_proof: CurdleProofsProof = CurdleProofsProof.new(
+    shuffle_proof = CurdleProofsProof.new(
         crs=crs,
         vec_R=vec_R,
         vec_S=vec_S,
@@ -99,15 +103,19 @@ def IsValidWhiskOpeningProof(
     """
     Verify knowledge of `k` such that `tracker.k_r_G == k * tracker.r_G` and `k_commitment == k * BLS_G1_GENERATOR`.
     """
-    tracker_proof_instance = TrackerOpeningProof.from_bytes(BufReader(tracker_proof))
+    try:
+        tracker_proof_instance = TrackerOpeningProof.from_bytes(BufReader(tracker_proof))
 
-    transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
-    return tracker_proof_instance.verify(
-        transcript_verifier,
-        pubkey_to_G1(tracker.k_r_G),
-        pubkey_to_G1(tracker.r_G),
-        pubkey_to_G1(k_commitment),
-    )
+        transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
+        tracker_proof_instance.verify(
+            transcript_verifier,
+            pubkey_to_G1(tracker.k_r_G),
+            pubkey_to_G1(tracker.r_G),
+            pubkey_to_G1(k_commitment),
+        )
+        return True
+    except:  # noqa: E722
+        return False
 
 
 def GenerateWhiskTrackerProof(

@@ -53,7 +53,7 @@ class SamePermutationProof:
         vec_a_blinders: List[Fr],
         vec_m_blinders: List[Fr],
         transcript: CurdleproofsTranscript,
-    ) -> Tuple[Optional[T_SAME_PERM_PROOF], str]:
+    ) -> T_SAME_PERM_PROOF:
         n_blinders = len(vec_a_blinders)
         ell = len(crs_G_vec)
 
@@ -77,7 +77,7 @@ class SamePermutationProof:
             vec_a_blinders[i] + alpha * vec_m_blinders[i] for i in range(0, n_blinders)
         ]
 
-        (grand_product_proof, err) = GrandProductProof.new(
+        grand_product_proof = GrandProductProof.new(
             crs_G_vec=crs_G_vec,
             crs_H_vec=crs_H_vec,
             crs_U=crs_U,
@@ -88,10 +88,7 @@ class SamePermutationProof:
             transcript=transcript,
         )
 
-        if grand_product_proof is None:
-            return (None, err or "")
-
-        return cls(B, grand_product_proof), ""
+        return cls(B, grand_product_proof)
 
     def verify(
         self,
@@ -106,7 +103,7 @@ class SamePermutationProof:
         n_blinders: int,
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
-    ) -> Tuple[bool, str]:
+    ):
         ell = len(crs_G_vec)
 
         # Step 1
@@ -128,7 +125,7 @@ class SamePermutationProof:
             vec_beta_repeated,
         )
 
-        (grand_prod_verify, err) = self.grand_prod_proof.verify(
+        self.grand_prod_proof.verify(
             crs_G_vec=crs_G_vec,
             crs_H_vec=crs_H_vec,
             crs_U=crs_U,
@@ -140,11 +137,6 @@ class SamePermutationProof:
             transcript=transcript,
             msm_accumulator=msm_accumulator,
         )
-
-        if not grand_prod_verify:
-            return (False, err)
-
-        return (True, "")
 
     def to_json(self):
         return {

@@ -101,13 +101,13 @@ class IPA:
         vec_c: List[Fr],
         vec_d: List[Fr],
         transcript: CurdleproofsTranscript,
-    ) -> Tuple[Optional[T_IPA], Optional[str]]:
+    ) -> T_IPA:
         n = len(vec_c)
         lg_n = int(log2(n))
         if n != 2**lg_n:
-            return (None, "n != 2 ** lg_n, {} not a power of 2".format(n))
+            raise Exception("n != 2 ** lg_n, {} not a power of 2".format(n))
         if n != len(vec_d):
-            return (None, "len(vec_c) != len(vec_d)")
+            raise Exception("len(vec_c) != len(vec_d)")
 
         (vec_r_c, vec_r_d) = generate_ipa_blinders(vec_c, vec_d)
 
@@ -167,19 +167,16 @@ class IPA:
             crs_G_vec = G_L
             crs_G_prime_vec = G_prime_L
 
-        return (
-            cls(B_c, B_d, vec_L_C, vec_R_C, vec_L_D, vec_R_D, vec_c[0], vec_d[0]),
-            None,
-        )
+        return cls(B_c, B_d, vec_L_C, vec_R_C, vec_L_D, vec_R_D, vec_c[0], vec_d[0])
 
     def verification_scalars(
         self, n: int, transcript: CurdleproofsTranscript
-    ) -> Tuple[Tuple[List[Fr], List[Fr], List[Fr], List[Fr]], Optional[str]]:
+    ) -> Tuple[List[Fr], List[Fr], List[Fr], List[Fr]]:
         lg_n = len(self.vec_L_C)
         if lg_n >= 32:
-            return (([], [], [], []), "vec_L_C too large")
+            raise Exception("vec_L_C too large")
         elif n != 2**lg_n:
-            return (([], [], [], []), "n != 2 ** lg_n")
+            raise Exception("n != 2 ** lg_n")
 
         verification_scalars_bitstring = get_verification_scalars_bitstring(n, lg_n)
 
@@ -203,7 +200,7 @@ class IPA:
 
         vec_s_inv = [invert(s) for s in vec_s]
 
-        return ((challenges, challenges_inv, vec_s, vec_s_inv), None)
+        return (challenges, challenges_inv, vec_s, vec_s_inv)
 
     def verify(
         self,
@@ -215,7 +212,7 @@ class IPA:
         vec_u: List[Fr],
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
-    ) -> Tuple[bool, str]:
+    ):
         n = len(crs_G_vec)
         # assert(((n != 0) and (n & (n-1) == 0)), "n must be a power of 2")
 
@@ -229,11 +226,9 @@ class IPA:
         alpha = transcript.get_and_append_challenge(b"ipa_alpha")
         beta = transcript.get_and_append_challenge(b"ipa_beta")
 
-        ((vec_gamma, vec_gamma_inv, vec_s, vec_s_inv), err) = self.verification_scalars(
+        (vec_gamma, vec_gamma_inv, vec_s, vec_s_inv) = self.verification_scalars(
             n, transcript
         )
-        if err is not None:
-            return (False, err)
 
         vec_c_times_s = [self.c_final * s for s in vec_s]
         vec_rhs_scalars = vec_c_times_s + [self.c_final * self.d_final * beta]
@@ -262,8 +257,6 @@ class IPA:
             compute_MSM(self.vec_R_D, vec_gamma_inv),
         )
         msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_d_div_s)
-
-        return (True, "")
 
     def to_json(self):
         return {
