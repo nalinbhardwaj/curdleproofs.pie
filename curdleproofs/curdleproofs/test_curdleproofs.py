@@ -645,7 +645,7 @@ def test_serde_shuffle_proof():
     ell = N - N_BLINDERS
     crs = CurdleproofsCrs.new(ell, N_BLINDERS)
     pre_shuffle_trackers = generate_random_trackers(ell)
-    permutation = list(range(len(crs.n_el())))
+    permutation = list(range(crs.n_el()))
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
