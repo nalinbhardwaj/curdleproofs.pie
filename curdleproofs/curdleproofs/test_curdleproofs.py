@@ -547,9 +547,10 @@ def test_serde_g1_generator():
 def test_serde_crs():
     N = 64
     N_BLINDERS = 4
-    crs = CurdleproofsCrs.new(N, N_BLINDERS)
+    ell = N - N_BLINDERS
+    crs = CurdleproofsCrs.new(ell, N_BLINDERS)
     crs_bytes = crs.to_bytes()
-    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(BufReader(crs_bytes), N, N_BLINDERS))
+    assert crs_to_json(crs) == crs_to_json(CurdleproofsCrs.from_bytes(BufReader(crs_bytes), ell, N_BLINDERS))
 
 
 def test_serde_tracker_proof():
