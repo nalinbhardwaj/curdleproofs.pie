@@ -21,10 +21,10 @@ from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize, multiply
 
 
 class WhiskTracker:
-    r_G: BLSG1Point  # r * G
-    k_r_G: BLSG1Point  # k * r * G
+    r_G: PointProjective  # r * G
+    k_r_G: PointProjective  # k * r * G
 
-    def __init__(self, r_G: BLSG1Point, k_r_G: BLSG1Point):
+    def __init__(self, r_G: PointProjective, k_r_G: PointProjective):
         self.r_G = r_G
         self.k_r_G = k_r_G
 
@@ -112,7 +112,7 @@ SerializedWhiskTrackerProof = bytes
 
 def IsValidWhiskOpeningProof(
     tracker: WhiskTracker,
-    k_commitment: BLSG1Point,
+    k_commitment: PointProjective,
     tracker_proof: SerializedWhiskTrackerProof,
 ) -> bool:
     """
@@ -123,9 +123,9 @@ def IsValidWhiskOpeningProof(
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
     return tracker_proof_instance.verify(
         transcript_verifier,
-        affine_to_projective(tracker.k_r_G),
-        affine_to_projective(tracker.r_G),
-        affine_to_projective(k_commitment),
+        tracker.k_r_G,
+        tracker.r_G,
+        k_commitment,
     )
 
 
@@ -135,8 +135,8 @@ def GenerateWhiskTrackerProof(
 ) -> SerializedWhiskTrackerProof:
     transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
     opening_proof = TrackerOpeningProof.new(
-        k_r_G=affine_to_projective(tracker.k_r_G),
-        r_G=affine_to_projective(tracker.r_G),
+        k_r_G=tracker.k_r_G,
+        r_G=tracker.r_G,
         k_G=multiply(G1, int(k)),
         G=G1,
         k=k,

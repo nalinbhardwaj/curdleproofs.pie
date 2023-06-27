@@ -3,7 +3,6 @@ import random
 from typing import Any, Dict, Tuple, Type, TypeVar
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.util import (
-    PointAffine,
     PointProjective,
     Fr,
     field_to_bytes,

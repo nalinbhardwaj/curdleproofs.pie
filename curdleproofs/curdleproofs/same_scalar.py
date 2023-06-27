@@ -6,7 +6,6 @@ from curdleproofs.util import field_from_json, field_to_json, points_projective_
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Tuple, Type, TypeVar
 from curdleproofs.util import (
-    PointAffine,
     PointProjective,
     Fr,
     field_to_bytes,

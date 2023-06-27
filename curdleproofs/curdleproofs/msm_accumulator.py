@@ -1,5 +1,5 @@
 import random
-from curdleproofs.util import PointAffine, PointProjective, Fr, affine_to_projective
+from curdleproofs.util import PointProjective, Fr, affine_to_projective
 from typing import Dict, List, Tuple, Union
 from py_ecc.optimized_bls12_381.optimized_curve import (
     curve_order,
