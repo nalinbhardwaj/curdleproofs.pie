@@ -55,7 +55,7 @@ class CurdleproofsCrs:
         return cls(
             vec_G=vec_G,
             vec_H=vec_H,
-            H=points[ell+n_blinders + 1],
+            H=points[ell+n_blinders + 0],
             G_t=points[ell+n_blinders + 1],
             G_u=points[ell+n_blinders + 2],
             G_sum=reduce(add, vec_G, Z1),
