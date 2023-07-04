@@ -275,8 +275,8 @@ class CurdleProofsProof:
 
         return True, ""
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "A": point_projective_to_json(self.A),
             "cm_T": self.cm_T.to_json(),
             "cm_U": self.cm_U.to_json(),
@@ -286,20 +286,18 @@ class CurdleProofsProof:
             "same_scalar_proof": self.same_scalar_proof.to_json(),
             "same_msm_proof": self.same_msm_proof.to_json(),
         }
-        return json.dumps(dic)
 
     @classmethod
-    def from_json(cls: Type[T_CurdleProofsProof], json_str: str) -> T_CurdleProofsProof:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_CurdleProofsProof], json) -> T_CurdleProofsProof:
         return cls(
-            A=point_projective_from_json(dic["A"]),
-            cm_T=GroupCommitment.from_json(dic["cm_T"]),
-            cm_U=GroupCommitment.from_json(dic["cm_U"]),
-            R=point_projective_from_json(dic["R"]),
-            S=point_projective_from_json(dic["S"]),
-            same_perm_proof=SamePermutationProof.from_json(dic["same_perm_proof"]),
-            same_scalar_proof=SameScalarProof.from_json(dic["same_scalar_proof"]),
-            same_msm_proof=SameMSMProof.from_json(dic["same_msm_proof"]),
+            A=point_projective_from_json(json["A"]),
+            cm_T=GroupCommitment.from_json(json["cm_T"]),
+            cm_U=GroupCommitment.from_json(json["cm_U"]),
+            R=point_projective_from_json(json["R"]),
+            S=point_projective_from_json(json["S"]),
+            same_perm_proof=SamePermutationProof.from_json(json["same_perm_proof"]),
+            same_scalar_proof=SameScalarProof.from_json(json["same_scalar_proof"]),
+            same_msm_proof=SameMSMProof.from_json(json["same_msm_proof"]),
         )
 
 

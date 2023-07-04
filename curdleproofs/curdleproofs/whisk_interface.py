@@ -118,7 +118,7 @@ def IsValidWhiskOpeningProof(
     """
     Verify knowledge of `k` such that `tracker.k_r_G == k * tracker.r_G` and `k_commitment == k * BLS_G1_GENERATOR`.
     """
-    tracker_proof_instance = TrackerOpeningProof.from_json(tracker_proof.decode())
+    tracker_proof_instance = TrackerOpeningProof.from_json(json.loads(tracker_proof.decode()))
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
     return tracker_proof_instance.verify(
@@ -143,4 +143,4 @@ def GenerateWhiskTrackerProof(
         transcript=transcript_prover,
     )
 
-    return opening_proof.to_json().encode()
+    return json.dumps(opening_proof.to_json()).encode()

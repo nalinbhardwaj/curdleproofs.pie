@@ -142,17 +142,15 @@ class SamePermutationProof:
 
         return (True, "")
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "B": point_projective_to_json(self.B),
             "grand_prod_proof": self.grand_prod_proof.to_json(),
         }
-        return json.dumps(dic)
 
     @classmethod
-    def from_json(cls: Type[T_SAME_PERM_PROOF], json_str: str) -> T_SAME_PERM_PROOF:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_SAME_PERM_PROOF], json) -> T_SAME_PERM_PROOF:
         return cls(
-            B=point_projective_from_json(dic["B"]),
-            grand_prod_proof=GrandProductProof.from_json(dic["grand_prod_proof"]),
+            B=point_projective_from_json(json["B"]),
+            grand_prod_proof=GrandProductProof.from_json(json["grand_prod_proof"]),
         )

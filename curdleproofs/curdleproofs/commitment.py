@@ -58,17 +58,15 @@ class GroupCommitment:
             return NotImplemented
         return eq(self.T_1, __o.T_1) and eq(self.T_2, __o.T_2)
 
-    def to_json(self) -> str:
-        dic = {
+    def to_json(self):
+        return {
             "T_1": point_projective_to_json(self.T_1),
             "T_2": point_projective_to_json(self.T_2),
         }
-        return json.dumps(dic)
 
     @classmethod
-    def from_json(cls: Type[T_GroupCommitment], json_str: str) -> T_GroupCommitment:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_GroupCommitment], json) -> T_GroupCommitment:
         return cls(
-            T_1=point_projective_from_json(dic["T_1"]),
-            T_2=point_projective_from_json(dic["T_2"]),
+            T_1=point_projective_from_json(json["T_1"]),
+            T_2=point_projective_from_json(json["T_2"]),
         )

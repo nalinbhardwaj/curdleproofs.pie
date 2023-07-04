@@ -84,22 +84,17 @@ class TrackerOpeningProof:
 
         return eq(Aprime, self.A) and eq(Bprime, self.B)
 
-    def to_json(self) -> str:
-        return json.dumps(
-            {
-                "A": point_projective_to_json(self.A),
-                "B": point_projective_to_json(self.B),
-                "s": field_to_json(self.s),
-            }
-        )
+    def to_json(self):
+        return {
+            "A": point_projective_to_json(self.A),
+            "B": point_projective_to_json(self.B),
+            "s": field_to_json(self.s),
+        }
 
     @classmethod
-    def from_json(
-        cls: Type[T_TrackerOpeningProof], json_str: str
-    ) -> T_TrackerOpeningProof:
-        dic = json.loads(json_str)
+    def from_json(cls: Type[T_TrackerOpeningProof], json) -> T_TrackerOpeningProof:
         return cls(
-            point_projective_from_json(dic["A"]),
-            point_projective_from_json(dic["B"]),
-            field_from_json(dic["s"], Fr),
+            point_projective_from_json(json["A"]),
+            point_projective_from_json(json["B"]),
+            field_from_json(json["s"], Fr),
         )
