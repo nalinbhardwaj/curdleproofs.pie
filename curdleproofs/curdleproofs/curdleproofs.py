@@ -11,6 +11,8 @@ from curdleproofs.util import (
     point_projective_to_json,
     points_projective_to_bytes,
     get_random_point,
+    BufReader,
+    g1_to_bytes,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
@@ -37,6 +39,8 @@ from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
 from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.commitment import GroupCommitment
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
 
 N_BLINDERS = 4
 
@@ -298,6 +302,31 @@ class CurdleProofsProof:
             same_perm_proof=SamePermutationProof.from_json(json["same_perm_proof"]),
             same_scalar_proof=SameScalarProof.from_json(json["same_scalar_proof"]),
             same_msm_proof=SameMSMProof.from_json(json["same_msm_proof"]),
+        )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.A),
+            self.cm_T.to_bytes(),
+            self.cm_U.to_bytes(),
+            g1_to_bytes(self.R),
+            g1_to_bytes(self.S),
+            self.same_perm_proof.to_bytes(),
+            self.same_scalar_proof.to_bytes(),
+            self.same_msm_proof.to_bytes(),
+        ])
+
+    @classmethod
+    def from_bytes(cls: Type[T_CurdleProofsProof], b: BufReader, n: int) -> T_CurdleProofsProof:
+        return cls(
+            A=b.read_g1(),
+            cm_T=GroupCommitment.from_bytes(b),
+            cm_U=GroupCommitment.from_bytes(b),
+            R=b.read_g1(),
+            S=b.read_g1(),
+            same_perm_proof=SamePermutationProof.from_bytes(b, n),
+            same_scalar_proof=SameScalarProof.from_bytes(b),
+            same_msm_proof=SameMSMProof.from_bytes(b, n),
         )
 
 

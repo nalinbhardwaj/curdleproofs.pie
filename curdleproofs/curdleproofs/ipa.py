@@ -13,6 +13,11 @@ from curdleproofs.util import (
     points_affine_to_bytes,
     points_projective_to_bytes,
     get_random_point,
+    BufReader,
+    g1_to_bytes,
+    fr_to_bytes,
+    g1_list_to_bytes,
+    log2_int,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
@@ -283,4 +288,30 @@ class IPA:
             vec_R_D=[point_projective_from_json(p) for p in json["vec_R_D"]],
             c_final=field_from_json(json["c_final"], Fr),
             d_final=field_from_json(json["d_final"], Fr),
+        )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.B_c),
+            g1_to_bytes(self.B_d),
+            g1_list_to_bytes(self.vec_L_C),
+            g1_list_to_bytes(self.vec_R_C),
+            g1_list_to_bytes(self.vec_L_D),
+            g1_list_to_bytes(self.vec_R_D),
+            fr_to_bytes(self.c_final),
+            fr_to_bytes(self.d_final),
+        ])
+    
+    @classmethod
+    def from_bytes(cls: Type[T_IPA], b: BufReader, n: int) -> T_IPA:
+        log2_n = log2_int(n)
+        return cls(
+            B_c=b.read_g1(),
+            B_d=b.read_g1(),
+            vec_L_C=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_C=[b.read_g1() for _ in range(0, log2_n)],
+            vec_L_D=[b.read_g1() for _ in range(0, log2_n)],
+            vec_R_D=[b.read_g1() for _ in range(0, log2_n)],
+            c_final=b.read_fr(),
+            d_final=b.read_fr(),
         )

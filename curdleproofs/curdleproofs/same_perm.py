@@ -15,6 +15,8 @@ from curdleproofs.util import (
     points_projective_to_bytes,
     get_random_point,
     get_permutation,
+    BufReader,
+    g1_to_bytes,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
@@ -27,6 +29,8 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     Z1,
 )
 from operator import mul as op_mul
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
 
 T_SAME_PERM_PROOF = TypeVar("T_SAME_PERM_PROOF", bound="SamePermutationProof")
 
@@ -153,4 +157,17 @@ class SamePermutationProof:
         return cls(
             B=point_projective_from_json(json["B"]),
             grand_prod_proof=GrandProductProof.from_json(json["grand_prod_proof"]),
+        )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.B),
+            self.grand_prod_proof.to_bytes(),
+        ])
+
+    @classmethod
+    def from_bytes(cls: Type[T_SAME_PERM_PROOF], b: BufReader, n: int) -> T_SAME_PERM_PROOF:
+        return cls(
+            B=b.read_g1(),
+            grand_prod_proof=GrandProductProof.from_bytes(b, n),
         )

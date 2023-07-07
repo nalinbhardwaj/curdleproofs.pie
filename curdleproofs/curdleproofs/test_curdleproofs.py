@@ -34,6 +34,7 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     neg,
     Z1,
 )
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
 from curdleproofs.ipa import IPA
 from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
@@ -52,7 +53,7 @@ from curdleproofs.whisk_interface import (
     IsValidWhiskOpeningProof,
     IsValidWhiskShuffleProof,
 )
-
+from eth_typing import BLSPubkey
 
 def test_ipa():
     transcript = CurdleproofsTranscript(b"curdleproofs")
@@ -610,7 +611,7 @@ def test_tracker_opening_proof():
 
     transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
     opening_proof = TrackerOpeningProof.new(
-        k_r_G=k_r_G, r_G=r_G, k_G=k_G, G=G, k=k, transcript=transcript_prover
+        k_r_G=k_r_G, r_G=r_G, k_G=k_G, k=k, transcript=transcript_prover
     )
 
     json_str_proof = opening_proof.to_json()
@@ -645,15 +646,15 @@ def generate_random_k() -> Fr:
     return generate_blinders(1)[0]
 
 
-def get_k_commitment(k: Fr) -> PointProjective:
-    return multiply(G1, int(k))
+def get_k_commitment(k: Fr) -> BLSPubkey:
+    return G1_to_pubkey(multiply(G1, int(k)))
 
 
 def generate_tracker(k: Fr) -> WhiskTracker:
     r = generate_blinders(1)[0]
     r_G = multiply(G1, int(r))
     k_r_G = multiply(r_G, int(k))
-    return WhiskTracker(r_G, k_r_G)
+    return WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G))
 
 
 def generate_random_crs(ell: int) -> CurdleproofsCrs:

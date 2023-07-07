@@ -12,19 +12,27 @@ from curdleproofs.opening import TrackerOpeningProof
 from curdleproofs.util import (
     PointAffine as BLSG1Point,
     PointProjective,
+    PointAffine,
     affine_to_projective,
     point_projective_to_json,
     point_projective_from_json,
     Fr,
+    BufReader,
+    g1_to_bytes,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize, multiply
-
+from py_ecc.bls.g2_primitives import (
+    G1_to_pubkey,
+    pubkey_to_G1,
+)
+from eth_typing import BLSPubkey
+from py_ecc.bls.hash import os2ip
 
 class WhiskTracker:
-    r_G: PointProjective  # r * G
-    k_r_G: PointProjective  # k * r * G
+    r_G: BLSPubkey  # r * G
+    k_r_G: BLSPubkey  # k * r * G
 
-    def __init__(self, r_G: PointProjective, k_r_G: PointProjective):
+    def __init__(self, r_G: BLSPubkey, k_r_G: BLSPubkey):
         self.r_G = r_G
         self.k_r_G = k_r_G
 
@@ -50,6 +58,19 @@ class WhiskShuffleProof:
             M=point_projective_from_json(data["M"]),
             proof=CurdleProofsProof.from_json(data["proof"]),
         )
+    
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            g1_to_bytes(self.M),
+            self.proof.to_bytes(),
+        ])
+
+    @classmethod
+    def from_bytes(cls: Type[T_WhiskShuffleProof], b: BufReader, n: int) -> T_WhiskShuffleProof:
+        return cls(
+            M=b.read_g1(),
+            proof=CurdleProofsProof.from_bytes(b, n),
+        )
 
 
 WhiskShuffleProofBytes = bytes
@@ -64,13 +85,17 @@ def IsValidWhiskShuffleProof(
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
     """
-    vec_R = [tracker.r_G for tracker in pre_shuffle_trackers]
-    vec_S = [tracker.k_r_G for tracker in pre_shuffle_trackers]
+    vec_R = [pubkey_to_G1(tracker.r_G) for tracker in pre_shuffle_trackers]
+    vec_S = [pubkey_to_G1(tracker.k_r_G) for tracker in pre_shuffle_trackers]
 
-    vec_T = [tracker.r_G for tracker in post_shuffle_trackers]
-    vec_U = [tracker.k_r_G for tracker in post_shuffle_trackers]
+    vec_T = [pubkey_to_G1(tracker.r_G) for tracker in post_shuffle_trackers]
+    vec_U = [pubkey_to_G1(tracker.k_r_G) for tracker in post_shuffle_trackers]
 
-    whisk_shuffle_proof = WhiskShuffleProof.from_json(json.loads(whisk_shuffle_proof_bytes.decode()))
+    ell = len(crs.vec_G)
+    n_blinders = len(crs.vec_H)
+    n = ell + n_blinders
+
+    whisk_shuffle_proof = WhiskShuffleProof.from_bytes(BufReader(whisk_shuffle_proof_bytes), n)
 
     return whisk_shuffle_proof.proof.verify(crs, vec_R, vec_S, vec_T, vec_U, whisk_shuffle_proof.M)
 
@@ -82,8 +107,8 @@ def GenerateWhiskShuffleProof(
     random.shuffle(permutation)
     k = Fr(random.randint(1, Fr.field_modulus))
 
-    vec_R = [tracker.r_G for tracker in pre_shuffle_trackers]
-    vec_S = [tracker.k_r_G for tracker in pre_shuffle_trackers]
+    vec_R = [pubkey_to_G1(tracker.r_G) for tracker in pre_shuffle_trackers]
+    vec_S = [pubkey_to_G1(tracker.k_r_G) for tracker in pre_shuffle_trackers]
 
     vec_T, vec_U, M, vec_m_blinders = shuffle_permute_and_commit_input(
         crs, vec_R, vec_S, permutation, k
@@ -102,9 +127,9 @@ def GenerateWhiskShuffleProof(
     )
     whisk_shuffle_proof = WhiskShuffleProof(M, shuffle_proof)
 
-    post_trackers = [WhiskTracker(r_G, k_r_G) for r_G, k_r_G in zip(vec_T, vec_U)]
+    post_trackers = [WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G)) for r_G, k_r_G in zip(vec_T, vec_U)]
 
-    return post_trackers, json.dumps(whisk_shuffle_proof.to_json()).encode()
+    return post_trackers, whisk_shuffle_proof.to_bytes()
 
 
 SerializedWhiskTrackerProof = bytes
@@ -112,20 +137,20 @@ SerializedWhiskTrackerProof = bytes
 
 def IsValidWhiskOpeningProof(
     tracker: WhiskTracker,
-    k_commitment: PointProjective,
+    k_commitment: BLSPubkey,
     tracker_proof: SerializedWhiskTrackerProof,
 ) -> bool:
     """
     Verify knowledge of `k` such that `tracker.k_r_G == k * tracker.r_G` and `k_commitment == k * BLS_G1_GENERATOR`.
     """
-    tracker_proof_instance = TrackerOpeningProof.from_json(json.loads(tracker_proof.decode()))
+    tracker_proof_instance = TrackerOpeningProof.from_bytes(BufReader(tracker_proof))
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
     return tracker_proof_instance.verify(
         transcript_verifier,
-        tracker.k_r_G,
-        tracker.r_G,
-        k_commitment,
+        pubkey_to_G1(tracker.k_r_G),
+        pubkey_to_G1(tracker.r_G),
+        pubkey_to_G1(k_commitment),
     )
 
 
@@ -135,12 +160,11 @@ def GenerateWhiskTrackerProof(
 ) -> SerializedWhiskTrackerProof:
     transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
     opening_proof = TrackerOpeningProof.new(
-        k_r_G=tracker.k_r_G,
-        r_G=tracker.r_G,
+        k_r_G=pubkey_to_G1(tracker.k_r_G),
+        r_G=pubkey_to_G1(tracker.r_G),
         k_G=multiply(G1, int(k)),
-        G=G1,
         k=k,
         transcript=transcript_prover,
     )
 
-    return json.dumps(opening_proof.to_json()).encode()
+    return opening_proof.to_bytes()

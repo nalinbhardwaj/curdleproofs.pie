@@ -16,7 +16,11 @@ from curdleproofs.util import (
     get_random_point,
     point_projective_from_json,
     point_projective_to_json,
+    BufReader,
+    g1_to_bytes,
 )
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from eth_typing import BLSPubkey
 
 T_CurdleproofsCrs = TypeVar("T_CurdleproofsCrs", bound="CurdleproofsCrs")
 
@@ -85,4 +89,27 @@ class CurdleproofsCrs:
             G_u=point_projective_from_json(dic["G_u"]),
             G_sum=point_projective_from_json(dic["G_sum"]),
             H_sum=point_projective_from_json(dic["H_sum"]),
+        )
+
+    def to_bytes(self) -> bytes:
+        return b''.join([
+            b''.join([g1_to_bytes(g) for g in self.vec_G]),
+            b''.join([g1_to_bytes(h) for h in self.vec_H]),
+            g1_to_bytes(self.H),
+            g1_to_bytes(self.G_t),
+            g1_to_bytes(self.G_u),
+            g1_to_bytes(self.G_sum),
+            g1_to_bytes(self.H_sum),
+        ])
+    
+    @classmethod
+    def from_bytes(cls: Type[T_CurdleproofsCrs], b: BufReader, ell: int, n_blinders: int) -> T_CurdleproofsCrs:
+        return cls(
+            vec_G=[b.read_g1() for _ in range(0, ell)],
+            vec_H=[b.read_g1() for _ in range(0, n_blinders)],
+            H=b.read_g1(),
+            G_t=b.read_g1(),
+            G_u=b.read_g1(),
+            G_sum=b.read_g1(),
+            H_sum=b.read_g1(),
         )
