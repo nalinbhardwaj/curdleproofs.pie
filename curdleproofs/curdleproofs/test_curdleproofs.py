@@ -1,40 +1,25 @@
 from functools import reduce
-from math import log2
 import operator
 import random
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.grand_prod import GrandProductProof
 from curdleproofs.opening import TrackerOpeningProof
-from curdleproofs.util import (
-    affine_to_projective,
-    point_affine_to_bytes,
-    point_projective_to_bytes,
-    points_affine_to_bytes,
-    points_projective_to_bytes,
-    get_random_point,
-    get_permutation,
-)
+from curdleproofs.util import affine_to_projective, get_random_point, get_permutation
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import List
 from curdleproofs.util import (
-    PointProjective,
     Fr,
-    field_to_bytes,
-    invert,
     generate_blinders,
     inner_product,
-    get_verification_scalars_bitstring,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
     G1,
     multiply,
     add,
-    neg,
     Z1,
 )
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from py_ecc.bls.g2_primitives import G1_to_pubkey
 from curdleproofs.ipa import IPA
 from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
@@ -54,6 +39,7 @@ from curdleproofs.whisk_interface import (
     IsValidWhiskShuffleProof,
 )
 from eth_typing import BLSPubkey
+
 
 def test_ipa():
     transcript = CurdleproofsTranscript(b"curdleproofs")

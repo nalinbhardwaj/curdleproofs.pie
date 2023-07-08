@@ -1,8 +1,3 @@
-from functools import reduce
-import json
-import operator
-import random
-from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.ipa import IPA, generate_blinders, inner_product
 from curdleproofs.util import (
     field_from_json,
@@ -10,7 +5,6 @@ from curdleproofs.util import (
     invert,
     point_projective_from_json,
     point_projective_to_bytes,
-    get_random_point,
     point_projective_to_json,
     BufReader,
     g1_to_bytes,
@@ -22,18 +16,13 @@ from curdleproofs.util import (
     PointProjective,
     Fr,
     field_to_bytes,
-    affine_to_projective,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
     multiply,
-    normalize,
     add,
     neg,
     eq,
-    Z1,
 )
 
 T_GrandProductProof = TypeVar("T_GrandProductProof", bound="GrandProductProof")
@@ -59,7 +48,6 @@ class GrandProductProof:
     ) -> Tuple[Optional[T_GrandProductProof], Optional[str]]:
         n_blinders = len(vec_b_blinders)
         ell = len(crs_G_vec)
-        n = ell + n_blinders
 
         transcript.append(b"gprod_step1", point_projective_to_bytes(B))
         transcript.append(b"gprod_step1", field_to_bytes(gprod_result))
@@ -224,7 +212,7 @@ class GrandProductProof:
             r_p=field_from_json(json["r_p"], Fr),
             ipa_proof=IPA.from_json(json["ipa_proof"]),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             g1_to_bytes(self.C),

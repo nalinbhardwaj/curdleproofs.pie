@@ -1,20 +1,12 @@
-import json
 from math import log2
-from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.util import (
-    affine_to_projective,
     field_from_json,
     field_to_json,
-    point_affine_to_bytes,
     point_projective_from_json,
-    point_projective_to_bytes,
     point_projective_to_json,
-    points_affine_to_bytes,
     points_projective_to_bytes,
-    get_random_point,
     generate_blinders,
     get_verification_scalars_bitstring,
-    g1_from_bytes,
     BufReader,
     g1_to_bytes,
     fr_to_bytes,
@@ -23,18 +15,12 @@ from curdleproofs.util import (
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
-from curdleproofs.util import PointProjective, Fr, field_to_bytes, invert
+from curdleproofs.util import PointProjective, Fr, invert
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
     multiply,
-    normalize,
     add,
-    neg,
 )
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
-from eth_typing import BLSPubkey
 
 T_SameMSMProof = TypeVar("T_SameMSMProof", bound="SameMSMProof")
 
@@ -284,7 +270,7 @@ class SameMSMProof:
             vec_R_U=[point_projective_from_json(R_U) for R_U in json["vec_R_U"]],
             x_final=field_from_json(json["x_final"], Fr),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             g1_to_bytes(self.B_a),
@@ -298,7 +284,7 @@ class SameMSMProof:
             g1_list_to_bytes(self.vec_R_U),
             fr_to_bytes(self.x_final),
         ])
-    
+
     @classmethod
     def from_bytes(cls: Type[T_SameMSMProof], b: BufReader, n: int) -> T_SameMSMProof:
         log2_n = log2_int(n)

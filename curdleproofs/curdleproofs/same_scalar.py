@@ -1,32 +1,15 @@
-import json
 import random
-
 from curdleproofs.commitment import GroupCommitment
 from curdleproofs.util import field_from_json, field_to_json, points_projective_to_bytes
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import List, Tuple, Type, TypeVar
+from typing import Tuple, Type, TypeVar
 from curdleproofs.util import (
     PointProjective,
     Fr,
-    field_to_bytes,
-    get_random_point,
-    g1_from_bytes,
     BufReader,
-    g1_to_bytes,
     fr_to_bytes,
 )
-from curdleproofs.msm_accumulator import MSMAccumulator
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
-    multiply,
-    normalize,
-    add,
-    neg,
-)
-from operator import mul as op_mul
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
-from eth_typing import BLSPubkey
+from py_ecc.optimized_bls12_381.optimized_curve import multiply
 
 T_SameScalarProof = TypeVar("T_SameScalarProof", bound="SameScalarProof")
 
@@ -151,7 +134,7 @@ class SameScalarProof:
             z_t=field_from_json(json["z_t"], Fr),
             z_u=field_from_json(json["z_u"], Fr),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             self.cm_A.to_bytes(),
@@ -170,4 +153,3 @@ class SameScalarProof:
             z_t=b.read_fr(),
             z_u=b.read_fr(),
         )
-
