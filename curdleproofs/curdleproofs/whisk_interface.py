@@ -75,7 +75,7 @@ def IsValidWhiskShuffleProof(
     pre_shuffle_trackers: Sequence[WhiskTracker],
     post_shuffle_trackers: Sequence[WhiskTracker],
     whisk_shuffle_proof_bytes: WhiskShuffleProofBytes,
-) -> Tuple[bool, str]:
+):
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
     """
