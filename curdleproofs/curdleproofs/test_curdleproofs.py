@@ -1,6 +1,7 @@
 from functools import reduce
 import operator
 import random
+import pytest
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.grand_prod import GrandProductProof
 from curdleproofs.opening import TrackerOpeningProof
@@ -61,7 +62,7 @@ def test_ipa():
     B = compute_MSM(crs_G_vec, vec_b)
     C = compute_MSM(crs_G_prime_vec, vec_c)
 
-    (proof, err) = IPA.new(
+    proof = IPA.new(
         crs_G_vec=crs_G_vec,
         crs_G_prime_vec=crs_G_prime_vec,
         crs_H=crs_H,
@@ -83,12 +84,11 @@ def test_ipa():
         "crs len",
         len(crs_G_vec),
     )
-    print("err: ", err)
 
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator = MSMAccumulator()
 
-    (result, err) = proof.verify(
+    proof.verify(
         crs_G_vec=crs_G_vec,
         crs_H=crs_H,
         C=B,
@@ -98,30 +98,23 @@ def test_ipa():
         transcript=transcript_verifier,
         msm_accumulator=msm_accumulator,
     )
-    msm_verify = msm_accumulator.verify()
-
-    print("result: ", result)
-    print("msm_verify: ", msm_verify)
-    print("err: ", err)
-    assert result and msm_verify
+    msm_accumulator.verify()
 
     transcript_wrong = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator_wrong = MSMAccumulator()
-    (result_wrong, err_wrong) = proof.verify(
-        crs_G_vec=crs_G_vec,
-        crs_H=crs_H,
-        C=B,
-        D=C,
-        inner_prod=z + Fr.one(),
-        vec_u=vec_u,
-        transcript=transcript_wrong,
-        msm_accumulator=msm_accumulator_wrong,
-    )
-    msm_wrong_verify = msm_accumulator_wrong.verify()
-    print("result_wrong: ", result_wrong)
-    print("msm_wrong_verify: ", msm_wrong_verify)
-    print("err_wrong: ", err_wrong)
-    assert not (result_wrong and msm_wrong_verify)
+
+    with pytest.raises(AssertionError):
+        proof.verify(
+            crs_G_vec=crs_G_vec,
+            crs_H=crs_H,
+            C=B,
+            D=C,
+            inner_prod=z + Fr.one(),
+            vec_u=vec_u,
+            transcript=transcript_wrong,
+            msm_accumulator=msm_accumulator_wrong,
+        )
+        msm_accumulator_wrong.verify()
 
 
 def test_gprod():
@@ -144,7 +137,7 @@ def test_gprod():
 
     B = add(compute_MSM(crs_G_vec, vec_b), compute_MSM(crs_H_vec, vec_b_blinders))
 
-    (gprod_proof, err) = GrandProductProof.new(
+    gprod_proof = GrandProductProof.new(
         crs_G_vec=crs_G_vec,
         crs_H_vec=crs_H_vec,
         crs_U=crs_U,
@@ -156,12 +149,11 @@ def test_gprod():
     )
 
     print("Prover result: ", gprod_proof)
-    print("Prover error:", err)
 
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator = MSMAccumulator()
 
-    (result, err) = gprod_proof.verify(
+    gprod_proof.verify(
         crs_G_vec=crs_G_vec,
         crs_H_vec=crs_H_vec,
         crs_U=crs_U,
@@ -174,58 +166,45 @@ def test_gprod():
         msm_accumulator=msm_accumulator,
     )
 
-    msm_verify = msm_accumulator.verify()
-
-    print("Result: ", result)
-    print("MSM verify: ", msm_verify)
-    print("Error: ", err)
-    assert result and msm_verify
+    msm_accumulator.verify()
 
     # Wrong test
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator = MSMAccumulator()
-    (result, err) = gprod_proof.verify(
-        crs_G_vec=crs_G_vec,
-        crs_H_vec=crs_H_vec,
-        crs_U=crs_U,
-        crs_G_sum=crs_G_sum,
-        crs_H_sum=crs_H_sum,
-        B=B,
-        gprod_result=gprod_result + Fr.one(),
-        n_blinders=n_blinders,
-        transcript=transcript_verifier,
-        msm_accumulator=msm_accumulator,
-    )
+    with pytest.raises(AssertionError):
+        gprod_proof.verify(
+            crs_G_vec=crs_G_vec,
+            crs_H_vec=crs_H_vec,
+            crs_U=crs_U,
+            crs_G_sum=crs_G_sum,
+            crs_H_sum=crs_H_sum,
+            B=B,
+            gprod_result=gprod_result + Fr.one(),
+            n_blinders=n_blinders,
+            transcript=transcript_verifier,
+            msm_accumulator=msm_accumulator,
+        )
 
-    msm_verify = msm_accumulator.verify()
-
-    print("Wrong Result: ", result)
-    print("Wrong MSM verify: ", msm_verify)
-    print("Wrong Error: ", err)
-    assert not (result and msm_verify)
+        msm_accumulator.verify()
 
     # Wrong test
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator = MSMAccumulator()
-    (result, err) = gprod_proof.verify(
-        crs_G_vec=crs_G_vec,
-        crs_H_vec=crs_H_vec,
-        crs_U=crs_U,
-        crs_G_sum=crs_G_sum,
-        crs_H_sum=crs_H_sum,
-        B=multiply(B, 3),
-        gprod_result=gprod_result,
-        n_blinders=n_blinders,
-        transcript=transcript_verifier,
-        msm_accumulator=msm_accumulator,
-    )
+    with pytest.raises(AssertionError):
+        gprod_proof.verify(
+            crs_G_vec=crs_G_vec,
+            crs_H_vec=crs_H_vec,
+            crs_U=crs_U,
+            crs_G_sum=crs_G_sum,
+            crs_H_sum=crs_H_sum,
+            B=multiply(B, 3),
+            gprod_result=gprod_result,
+            n_blinders=n_blinders,
+            transcript=transcript_verifier,
+            msm_accumulator=msm_accumulator,
+        )
 
-    msm_verify = msm_accumulator.verify()
-
-    print("Wrong Result: ", result)
-    print("Wrong MSM verify: ", msm_verify)
-    print("Wrong Error: ", err)
-    assert not (result and msm_verify)
+        msm_accumulator.verify()
 
 
 def test_same_permutation_proof():
@@ -256,7 +235,7 @@ def test_same_permutation_proof():
     )
     M = add(compute_MSM(crs_G_vec, permutation), compute_MSM(crs_H_vec, vec_m_blinders))
 
-    (same_perm_proof, err) = SamePermutationProof.new(
+    same_perm_proof = SamePermutationProof.new(
         crs_G_vec=crs_G_vec,
         crs_H_vec=crs_H_vec,
         crs_U=crs_U,
@@ -270,12 +249,11 @@ def test_same_permutation_proof():
     )
 
     print("Proof: ", same_perm_proof)
-    print("Error: ", err)
 
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator = MSMAccumulator()
 
-    (verify, err) = same_perm_proof.verify(
+    same_perm_proof.verify(
         crs_G_vec=crs_G_vec,
         crs_H_vec=crs_H_vec,
         crs_U=crs_U,
@@ -289,12 +267,7 @@ def test_same_permutation_proof():
         msm_accumulator=msm_accumulator,
     )
 
-    msm_verify = msm_accumulator.verify()
-
-    print("Verify: ", verify)
-    print("Error: ", err)
-    print("MSM verify: ", msm_verify)
-    assert verify and msm_verify
+    msm_accumulator.verify()
 
 
 def test_same_msm():
@@ -327,7 +300,7 @@ def test_same_msm():
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
     msm_accumulator = MSMAccumulator()
 
-    (result, err) = proof.verify(
+    proof.verify(
         crs_G_vec=crs_G_vec,
         A=A,
         Z_t=Z_t,
@@ -338,11 +311,7 @@ def test_same_msm():
         msm_accumulator=msm_accumulator,
     )
 
-    msm_verify = msm_accumulator.verify()
-    print("Result", result)
-    print("MSM verify", msm_verify)
-    print("Error", err)
-    assert result and msm_verify
+    msm_accumulator.verify()
 
 
 def test_same_scalar_arg():
@@ -379,7 +348,7 @@ def test_same_scalar_arg():
     print("proof", proof)
 
     transcript_verifier = CurdleproofsTranscript(b"curdleproofs")
-    (res, err) = proof.verify(
+    proof.verify(
         crs_G_t=crs_G_t,
         crs_G_u=crs_G_u,
         crs_H=crs_H,
@@ -389,9 +358,6 @@ def test_same_scalar_arg():
         cm_U=cm_U,
         transcript=transcript_verifier,
     )
-    print("res", res)
-    print("err", err)
-    assert res
 
 
 def test_group_commit():
@@ -444,10 +410,7 @@ def test_shuffle_argument():
 
     # for i in range(50):
     #   print("iter ", i)
-    verify, err = shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
-    print("verify", verify)
-    print("err", err)
-    assert verify
+    shuffle_proof.verify(crs, vec_R, vec_S, vec_T, vec_U, M)
 
 
 def test_bad_shuffle_argument():
@@ -481,43 +444,34 @@ def test_bad_shuffle_argument():
 
     print("shuffle proof", shuffle_proof)
 
-    verify, err = shuffle_proof.verify(crs, vec_S, vec_R, vec_T, vec_U, M)
-    print("false verify", verify)
-    print("err", err)
-    assert not verify
+    with pytest.raises(AssertionError):
+        shuffle_proof.verify(crs, vec_S, vec_R, vec_T, vec_U, M)
 
     another_permutation = list(range(ell))
     random.shuffle(another_permutation)
 
-    verify, err = shuffle_proof.verify(
-        crs,
-        vec_R,
-        vec_S,
-        get_permutation(vec_T, another_permutation),
-        get_permutation(vec_U, another_permutation),
-        M,
-    )
-    print("false verify also", verify)
-    print("err", err)
-    assert not verify
+    with pytest.raises(AssertionError):
+        shuffle_proof.verify(
+            crs,
+            vec_R,
+            vec_S,
+            get_permutation(vec_T, another_permutation),
+            get_permutation(vec_U, another_permutation),
+            M,
+        )
 
-    verify, err = shuffle_proof.verify(
-        crs, vec_R, vec_S, vec_T, vec_U, multiply(M, int(k))
-    )
-    print("false verify also also", verify)
-    print("err", err)
-    assert not verify
+        shuffle_proof.verify(
+            crs, vec_R, vec_S, vec_T, vec_U, multiply(M, int(k))
+        )
 
     another_k = Fr(random.randint(1, Fr.field_modulus))
     another_vec_T = [multiply(affine_to_projective(T), int(another_k)) for T in vec_T]
     another_vec_U = [multiply(affine_to_projective(U), int(another_k)) for U in vec_U]
 
-    verify, err = shuffle_proof.verify(
-        crs, vec_R, vec_S, another_vec_T, another_vec_U, M
-    )
-    print("false verify also also also", verify)
-    print("err", err)
-    assert not verify
+    with pytest.raises(AssertionError):
+        shuffle_proof.verify(
+            crs, vec_R, vec_S, another_vec_T, another_vec_U, M
+        )
 
 
 def test_serde():
@@ -573,7 +527,7 @@ def test_serde():
 
     # for i in range(50):
     #   print("iter ", i)
-    verify, err = deser_shuffle_proof.verify(
+    deser_shuffle_proof.verify(
         deser_crs,
         deser_verifier_input.vec_R,
         deser_verifier_input.vec_S,
@@ -581,9 +535,6 @@ def test_serde():
         deser_verifier_input.vec_U,
         deser_verifier_input.M,
     )
-    print("verify", verify)
-    print("err", err)
-    assert verify
 
 
 def test_tracker_opening_proof():
@@ -606,7 +557,7 @@ def test_tracker_opening_proof():
     deser_proof = TrackerOpeningProof.from_json(json_str_proof)
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
-    assert deser_proof.verify(transcript_verifier, k_r_G, r_G, k_G)
+    deser_proof.verify(transcript_verifier, k_r_G, r_G, k_G)
 
 
 def test_whisk_interface_tracker_opening_proof():
@@ -616,7 +567,7 @@ def test_whisk_interface_tracker_opening_proof():
 
     tracker_proof = GenerateWhiskTrackerProof(tracker, k)
 
-    assert IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
+    IsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
 
 
 def test_whisk_interface_shuffle_proof():
@@ -625,7 +576,7 @@ def test_whisk_interface_shuffle_proof():
     crs = generate_random_crs(ell)
     pre_trackers = generate_random_trackers(ell)
     post_trackers, shuffle_proof = GenerateWhiskShuffleProof(crs, pre_trackers)
-    assert IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, shuffle_proof)
+    IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, shuffle_proof)
 
 
 def generate_random_k() -> Fr:

@@ -66,7 +66,7 @@ class MSMAccumulator:
                 base_affine_int
             ] + random_factor * Fr(scalar)
 
-    def verify(self) -> bool:
+    def verify(self):
         bases: List[Tuple[int, int]]
         scalars: List[Fr]
         bases, scalars = map(list, zip(*self.base_scalar_map.items()))  # type: ignore
@@ -75,4 +75,4 @@ class MSMAccumulator:
             list(map(int, scalars)),
         )
         # print("bases", bases, "scalars", scalars, "computed", normalize(computed), "expected", normalize(self.A_c), "eq", eq(computed, self.A_c))
-        return eq(computed, self.A_c)
+        assert eq(computed, self.A_c)

@@ -11,7 +11,7 @@ from curdleproofs.util import (
     fr_to_bytes,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import List, Optional, Tuple, TypeVar, Type
+from typing import List, TypeVar, Type
 from curdleproofs.util import (
     PointProjective,
     Fr,
@@ -45,7 +45,7 @@ class GrandProductProof:
         vec_b: List[Fr],
         vec_b_blinders: List[Fr],
         transcript: CurdleproofsTranscript,
-    ) -> Tuple[Optional[T_GrandProductProof], Optional[str]]:
+    ) -> T_GrandProductProof:
         n_blinders = len(vec_b_blinders)
         ell = len(crs_G_vec)
 
@@ -115,7 +115,7 @@ class GrandProductProof:
         assert eq(compute_MSM(vec_G, vec_c), C)
         assert eq(compute_MSM(vec_G_prime, vec_d), D)
 
-        (ipa_proof, err) = IPA.new(
+        ipa_proof = IPA.new(
             crs_G_vec=vec_G,
             crs_G_prime_vec=vec_G_prime,
             crs_H=crs_U,
@@ -127,10 +127,7 @@ class GrandProductProof:
             transcript=transcript,
         )
 
-        if ipa_proof is None:
-            return None, err
-
-        return cls(C, r_p, ipa_proof), None
+        return cls(C, r_p, ipa_proof)
 
     def verify(
         self,
@@ -144,7 +141,7 @@ class GrandProductProof:
         n_blinders: int,
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
-    ) -> Tuple[bool, str]:
+    ):
         ell = len(crs_G_vec)
 
         # Step 1
@@ -182,7 +179,7 @@ class GrandProductProof:
             self.r_p * (beta ** (ell + 1)) + gprod_result * (beta**ell) - Fr.one()
         )
 
-        (ipa_result, err) = self.ipa_proof.verify(
+        self.ipa_proof.verify(
             crs_G_vec=vec_G,
             crs_H=crs_U,
             C=self.C,
@@ -192,11 +189,6 @@ class GrandProductProof:
             transcript=transcript,
             msm_accumulator=msm_accumulator,
         )
-
-        if not ipa_result:
-            return False, err
-
-        return True, ""
 
     def to_json(self):
         return {
