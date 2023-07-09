@@ -2,8 +2,6 @@ from typing import Type, TypeVar
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 
 from curdleproofs.util import (
-    Fr,
-    PointProjective,
     field_from_json,
     field_to_json,
     generate_blinders,
@@ -13,13 +11,9 @@ from curdleproofs.util import (
     BufReader,
     g1_to_bytes,
     fr_to_bytes,
-)
-from py_ecc.optimized_bls12_381.optimized_curve import (
     G1,
-    multiply,
-    add,
-    eq,
 )
+from py_arkworks_bls12381 import G1Point, Scalar
 
 T_TrackerOpeningProof = TypeVar("T_TrackerOpeningProof", bound="TrackerOpeningProof")
 
@@ -28,9 +22,9 @@ T_TrackerOpeningProof = TypeVar("T_TrackerOpeningProof", bound="TrackerOpeningPr
 class TrackerOpeningProof:
     def __init__(
         self,
-        A: PointProjective,
-        B: PointProjective,
-        s: Fr,
+        A: G1Point,
+        B: G1Point,
+        s: Scalar,
     ) -> None:
         self.A = A
         self.B = B
@@ -39,15 +33,15 @@ class TrackerOpeningProof:
     @classmethod
     def new(
         cls: Type[T_TrackerOpeningProof],
-        k_r_G: PointProjective,
-        r_G: PointProjective,
-        k_G: PointProjective,
-        k: Fr,
+        k_r_G: G1Point,
+        r_G: G1Point,
+        k_G: G1Point,
+        k: Scalar,
         transcript: CurdleproofsTranscript,
     ) -> T_TrackerOpeningProof:
         blinder = generate_blinders(1)[0]
-        A = multiply(G1, int(blinder))
-        B = multiply(r_G, int(blinder))
+        A = G1 * blinder
+        B = r_G * blinder
 
         transcript.append_list(
             b"tracker_opening_proof",
@@ -64,9 +58,9 @@ class TrackerOpeningProof:
     def verify(
         self,
         transcript: CurdleproofsTranscript,
-        k_r_G: PointProjective,
-        r_G: PointProjective,
-        k_G: PointProjective,
+        k_r_G: G1Point,
+        r_G: G1Point,
+        k_G: G1Point,
     ):
         transcript.append_list(
             b"tracker_opening_proof",
@@ -76,10 +70,10 @@ class TrackerOpeningProof:
             b"tracker_opening_proof_challenge"
         )
 
-        Aprime = add(multiply(G1, int(self.s)), multiply(k_G, int(challenge)))
-        Bprime = add(multiply(r_G, int(self.s)), multiply(k_r_G, int(challenge)))
+        Aprime = G1 * self.s + k_G * challenge
+        Bprime = r_G * self.s + k_r_G * challenge
 
-        assert eq(Aprime, self.A) and eq(Bprime, self.B)
+        assert Aprime == self.A and Bprime == self.B
 
     def to_json(self):
         return {
@@ -93,7 +87,7 @@ class TrackerOpeningProof:
         return cls(
             point_projective_from_json(json["A"]),
             point_projective_from_json(json["B"]),
-            field_from_json(json["s"], Fr),
+            field_from_json(json["s"]),
         )
 
     def to_bytes(self) -> bytes:

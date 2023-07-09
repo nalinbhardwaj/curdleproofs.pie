@@ -15,12 +15,9 @@ from curdleproofs.util import (
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Tuple, Type, TypeVar
-from curdleproofs.util import PointProjective, Fr, invert
+from curdleproofs.util import invert
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    add,
-)
+from py_arkworks_bls12381 import G1Point, Scalar
 
 T_SameMSMProof = TypeVar("T_SameMSMProof", bound="SameMSMProof")
 
@@ -28,16 +25,16 @@ T_SameMSMProof = TypeVar("T_SameMSMProof", bound="SameMSMProof")
 class SameMSMProof:
     def __init__(
         self,
-        B_a: PointProjective,
-        B_t: PointProjective,
-        B_u: PointProjective,
-        vec_L_A: List[PointProjective],
-        vec_L_T: List[PointProjective],
-        vec_L_U: List[PointProjective],
-        vec_R_A: List[PointProjective],
-        vec_R_T: List[PointProjective],
-        vec_R_U: List[PointProjective],
-        x_final: Fr,
+        B_a: G1Point,
+        B_t: G1Point,
+        B_u: G1Point,
+        vec_L_A: List[G1Point],
+        vec_L_T: List[G1Point],
+        vec_L_U: List[G1Point],
+        vec_R_A: List[G1Point],
+        vec_R_T: List[G1Point],
+        vec_R_U: List[G1Point],
+        x_final: Scalar,
     ) -> None:
         self.B_a = B_a
         self.B_t = B_t
@@ -53,25 +50,25 @@ class SameMSMProof:
     @classmethod
     def new(
         cls: Type[T_SameMSMProof],
-        crs_G_vec: List[PointProjective],
-        A: PointProjective,
-        Z_t: PointProjective,
-        Z_u: PointProjective,
-        vec_T: List[PointProjective],
-        vec_U: List[PointProjective],
-        vec_x: List[Fr],
+        crs_G_vec: List[G1Point],
+        A: G1Point,
+        Z_t: G1Point,
+        Z_u: G1Point,
+        vec_T: List[G1Point],
+        vec_U: List[G1Point],
+        vec_x: List[Scalar],
         transcript: CurdleproofsTranscript,
     ) -> T_SameMSMProof:
         n = len(vec_x)
         lg_n = int(log2(n))
         assert 2**lg_n == n
 
-        vec_L_T: List[PointProjective] = []
-        vec_R_T: List[PointProjective] = []
-        vec_L_U: List[PointProjective] = []
-        vec_R_U: List[PointProjective] = []
-        vec_L_A: List[PointProjective] = []
-        vec_R_A: List[PointProjective] = []
+        vec_L_T: List[G1Point] = []
+        vec_R_T: List[G1Point] = []
+        vec_L_U: List[G1Point] = []
+        vec_R_U: List[G1Point] = []
+        vec_L_A: List[G1Point] = []
+        vec_R_A: List[G1Point] = []
 
         vec_r = generate_blinders(n)
 
@@ -124,9 +121,9 @@ class SameMSMProof:
 
             for i in range(0, n):
                 x_L[i] += gamma_inv * x_R[i]
-                T_L[i] = add(T_L[i], multiply(T_R[i], int(gamma)))
-                U_L[i] = add(U_L[i], multiply(U_R[i], int(gamma)))
-                G_L[i] = add(G_L[i], multiply(G_R[i], int(gamma)))
+                T_L[i] = T_L[i] + T_R[i] * gamma
+                U_L[i] = U_L[i] + U_R[i] * gamma
+                G_L[i] = G_L[i] + G_R[i] * gamma
 
             vec_x = x_L
             vec_T = T_L
@@ -148,7 +145,7 @@ class SameMSMProof:
 
     def verification_scalars(
         self, n: int, transcript: CurdleproofsTranscript
-    ) -> Tuple[List[Fr], List[Fr], List[Fr]]:
+    ) -> Tuple[List[Scalar], List[Scalar], List[Scalar]]:
         lg_n = len(self.vec_L_A)
         if lg_n >= 32:
             raise Exception("lg_n >= 32")
@@ -157,7 +154,7 @@ class SameMSMProof:
 
         bitstring = get_verification_scalars_bitstring(n, lg_n)
 
-        challenges: List[Fr] = []
+        challenges: List[Scalar] = []
         for i in range(0, lg_n):
             transcript.append_list(
                 b"same_msm_loop",
@@ -176,9 +173,9 @@ class SameMSMProof:
 
         challenges_inv = list(map(invert, challenges))
 
-        vec_s: List[Fr] = []
+        vec_s: List[Scalar] = []
         for i in range(0, n):
-            vec_s.append(Fr.one())
+            vec_s.append(Scalar(1))
             for j in bitstring[i]:
                 vec_s[i] *= challenges[j]
 
@@ -186,12 +183,12 @@ class SameMSMProof:
 
     def verify(
         self,
-        crs_G_vec: List[PointProjective],
-        A: PointProjective,
-        Z_t: PointProjective,
-        Z_u: PointProjective,
-        vec_T: List[PointProjective],
-        vec_U: List[PointProjective],
+        crs_G_vec: List[G1Point],
+        A: G1Point,
+        Z_t: G1Point,
+        Z_u: G1Point,
+        vec_T: List[G1Point],
+        vec_U: List[G1Point],
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
     ):
@@ -215,26 +212,17 @@ class SameMSMProof:
 
         vec_x_times_s = [self.x_final * s_i for s_i in vec_s]
 
-        A_a = add(self.B_a, multiply(A, int(alpha)))
-        Z_t_a = add(self.B_t, multiply(Z_t, int(alpha)))
-        Z_u_a = add(self.B_u, multiply(Z_u, int(alpha)))
+        A_a = self.B_a + A * alpha
+        Z_t_a = self.B_t + Z_t * alpha
+        Z_u_a = self.B_u + Z_u * alpha
 
-        point_lhs = add(
-            add(compute_MSM(self.vec_L_A, vec_gamma), A_a),
-            compute_MSM(self.vec_R_A, vec_gamma_inv),
-        )
+        point_lhs = compute_MSM(self.vec_L_A, vec_gamma) + A_a + compute_MSM(self.vec_R_A, vec_gamma_inv)
         msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_x_times_s)
 
-        point_lhs = add(
-            add(compute_MSM(self.vec_L_T, vec_gamma), Z_t_a),
-            compute_MSM(self.vec_R_T, vec_gamma_inv),
-        )
+        point_lhs = compute_MSM(self.vec_L_T, vec_gamma) + Z_t_a + compute_MSM(self.vec_R_T, vec_gamma_inv)
         msm_accumulator.accumulate_check(point_lhs, vec_T, vec_x_times_s)
 
-        point_lhs = add(
-            add(compute_MSM(self.vec_L_U, vec_gamma), Z_u_a),
-            compute_MSM(self.vec_R_U, vec_gamma_inv),
-        )
+        point_lhs = compute_MSM(self.vec_L_U, vec_gamma) + Z_u_a + compute_MSM(self.vec_R_U, vec_gamma_inv)
         msm_accumulator.accumulate_check(point_lhs, vec_U, vec_x_times_s)
 
     def to_json(self):
@@ -263,7 +251,7 @@ class SameMSMProof:
             vec_R_A=[point_projective_from_json(R_A) for R_A in json["vec_R_A"]],
             vec_R_T=[point_projective_from_json(R_T) for R_T in json["vec_R_T"]],
             vec_R_U=[point_projective_from_json(R_U) for R_U in json["vec_R_U"]],
-            x_final=field_from_json(json["x_final"], Fr),
+            x_final=field_from_json(json["x_final"]),
         )
 
     def to_bytes(self) -> bytes:

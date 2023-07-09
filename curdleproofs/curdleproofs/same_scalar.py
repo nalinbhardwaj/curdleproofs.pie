@@ -1,22 +1,19 @@
-import random
 from curdleproofs.commitment import GroupCommitment
-from curdleproofs.util import field_from_json, field_to_json, points_projective_to_bytes
+from curdleproofs.util import field_from_json, field_to_json, points_projective_to_bytes, random_scalar
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import Type, TypeVar
 from curdleproofs.util import (
-    PointProjective,
-    Fr,
     BufReader,
     fr_to_bytes,
 )
-from py_ecc.optimized_bls12_381.optimized_curve import multiply
+from py_arkworks_bls12381 import G1Point, Scalar
 
 T_SameScalarProof = TypeVar("T_SameScalarProof", bound="SameScalarProof")
 
 
 class SameScalarProof:
     def __init__(
-        self, cm_A: GroupCommitment, cm_B: GroupCommitment, z_k: Fr, z_t: Fr, z_u: Fr
+        self, cm_A: GroupCommitment, cm_B: GroupCommitment, z_k: Scalar, z_t: Scalar, z_u: Scalar
     ) -> None:
         self.cm_A = cm_A
         self.cm_B = cm_B
@@ -27,24 +24,24 @@ class SameScalarProof:
     @classmethod
     def new(
         cls: Type[T_SameScalarProof],
-        crs_G_t: PointProjective,
-        crs_G_u: PointProjective,
-        crs_H: PointProjective,
-        R: PointProjective,
-        S: PointProjective,
+        crs_G_t: G1Point,
+        crs_G_u: G1Point,
+        crs_H: G1Point,
+        R: G1Point,
+        S: G1Point,
         cm_T: GroupCommitment,
         cm_U: GroupCommitment,
-        k: Fr,
-        r_t: Fr,
-        r_u: Fr,
+        k: Scalar,
+        r_t: Scalar,
+        r_u: Scalar,
         transcript: CurdleproofsTranscript,
     ) -> T_SameScalarProof:
-        r_a = Fr(random.randint(1, Fr.field_modulus))
-        r_b = Fr(random.randint(1, Fr.field_modulus))
-        r_k = Fr(random.randint(1, Fr.field_modulus))
+        r_a = random_scalar()
+        r_b = random_scalar()
+        r_k = random_scalar()
 
-        cm_A = GroupCommitment.new(crs_G_t, crs_H, multiply(R, int(r_k)), r_a)
-        cm_B = GroupCommitment.new(crs_G_u, crs_H, multiply(S, int(r_k)), r_b)
+        cm_A = GroupCommitment.new(crs_G_t, crs_H, R * r_k, r_a)
+        cm_B = GroupCommitment.new(crs_G_u, crs_H, S * r_k, r_b)
 
         transcript.append_list(
             b"sameexp_points",
@@ -73,11 +70,11 @@ class SameScalarProof:
 
     def verify(
         self,
-        crs_G_t: PointProjective,
-        crs_G_u: PointProjective,
-        crs_H: PointProjective,
-        R: PointProjective,
-        S: PointProjective,
+        crs_G_t: G1Point,
+        crs_G_u: G1Point,
+        crs_H: G1Point,
+        R: G1Point,
+        S: G1Point,
         cm_T: GroupCommitment,
         cm_U: GroupCommitment,
         transcript: CurdleproofsTranscript,
@@ -102,10 +99,10 @@ class SameScalarProof:
 
         alpha = transcript.get_and_append_challenge(b"same_scalar_alpha")
         expected_1 = GroupCommitment.new(
-            crs_G_t, crs_H, multiply(R, int(self.z_k)), self.z_t
+            crs_G_t, crs_H, R * self.z_k, self.z_t
         )
         expected_2 = GroupCommitment.new(
-            crs_G_u, crs_H, multiply(S, int(self.z_k)), self.z_u
+            crs_G_u, crs_H, S * self.z_k, self.z_u
         )
 
         computed_1 = self.cm_A + (cm_T * alpha)
@@ -127,9 +124,9 @@ class SameScalarProof:
         return cls(
             cm_A=GroupCommitment.from_json(json["cm_A"]),
             cm_B=GroupCommitment.from_json(json["cm_B"]),
-            z_k=field_from_json(json["z_k"], Fr),
-            z_t=field_from_json(json["z_t"], Fr),
-            z_u=field_from_json(json["z_u"], Fr),
+            z_k=field_from_json(json["z_k"]),
+            z_t=field_from_json(json["z_t"]),
+            z_u=field_from_json(json["z_u"]),
         )
 
     def to_bytes(self) -> bytes:

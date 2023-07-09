@@ -1,9 +1,7 @@
 from typing import List
-from py_ecc.secp256k1.secp256k1 import bytes_to_int
-from py_ecc.optimized_bls12_381.optimized_curve import curve_order
 from merlin import MerlinTranscript
-
-from curdleproofs.util import Fr
+from py_arkworks_bls12381 import Scalar
+from curdleproofs.util import CURVE_ORDER
 
 
 class CurdleproofsTranscript(MerlinTranscript):
@@ -14,18 +12,19 @@ class CurdleproofsTranscript(MerlinTranscript):
         for item in items:
             self.append_message(label, item)
 
-    def get_and_append_challenge(self, label: bytes) -> Fr:
+    def get_and_append_challenge(self, label: bytes) -> Scalar:
         while True:
             challenge_bytes = self.challenge_bytes(label, 32)
-            challenge_int = bytes_to_int(challenge_bytes)
-            if challenge_int >= curve_order:
+            challenge_int = int.from_bytes(challenge_bytes, byteorder='little')
+            if challenge_int >= CURVE_ORDER:
                 continue
-            f = Fr(challenge_int)
-            if f != Fr.zero():
+            # `Scalar.from_le_bytes` will error if value if >= CURVE_ORDER
+            f = Scalar.from_le_bytes(challenge_bytes)
+            if not f.is_zero():
                 self.append(label, challenge_bytes)
                 return f
 
-    def get_and_append_challenges(self, label: bytes, n: int) -> List[Fr]:
+    def get_and_append_challenges(self, label: bytes, n: int) -> List[Scalar]:
         return [self.get_and_append_challenge(label) for _ in range(0, n)]
 
 

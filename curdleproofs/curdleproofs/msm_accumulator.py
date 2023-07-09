@@ -1,23 +1,14 @@
-import random
-from curdleproofs.util import PointProjective, Fr, affine_to_projective
-from typing import Dict, List, Tuple, Union
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    normalize,
-    add,
-    Z1,
-    eq,
-    FQ,
-    is_inf,
-)
+from curdleproofs.util import random_scalar, g1_is_inf, Z1, point_projective_to_bytes
+from typing import Dict, List, Tuple
+from py_arkworks_bls12381 import G1Point, Scalar
 
 
 def compute_MSM(
-    bases: List[PointProjective], scalars: Union[List[Fr], List[int]]
-) -> PointProjective:
-    current = Z1  # zero
+    bases: List[G1Point], scalars: List[Scalar]
+) -> G1Point:
+    current = G1Point.identity()  # zero
     for (base, scalar) in zip(bases, scalars):
-        current = add(current, multiply(base, int(scalar)))  # type: ignore
+        current = current + (base * scalar)  # type: ignore
     return current
 
 
@@ -41,38 +32,37 @@ def compute_MSM(
 class MSMAccumulator:
     def __init__(self) -> None:
         self.A_c = Z1
-        self.base_scalar_map: Dict[Tuple[int, int], Fr] = {}
+        self.base_scalar_map: Dict[bytes, Scalar] = {}
 
     def accumulate_check(
         self,
-        C: PointProjective,
-        bases: List[PointProjective],
-        scalars: Union[List[Fr], List[int]],
+        C: G1Point,
+        bases: List[G1Point],
+        scalars: List[Scalar],
     ) -> None:
-        random_factor = Fr(random.randint(1, Fr.field_modulus))
+        random_factor = random_scalar()
 
-        self.A_c = add(self.A_c, multiply(C, int(random_factor)))
+        self.A_c = self.A_c + C * random_factor
 
         for (base, scalar) in zip(bases, scalars):
-            # print("base", base)
-            if is_inf(base):
+            # TODO: Is this infinity check necessary for G1Point class?
+            if g1_is_inf(base):
                 continue
-            base_affine_int_untyped = tuple(map(int, normalize(base)))
-            base_affine_int = (base_affine_int_untyped[0], base_affine_int_untyped[1])
+
+            # Note: G1Point is not hashable so a different representation is necessary to index base_scalar_map
+            # TODO: Compressing and decompressing each point is unnecessary, find a different hashble representation
+            base_comp = point_projective_to_bytes(base)
             # print("base_affine_int", base_affine_int)
-            if base_affine_int not in self.base_scalar_map:
-                self.base_scalar_map[base_affine_int] = Fr.zero()
-            self.base_scalar_map[base_affine_int] = self.base_scalar_map[
-                base_affine_int
-            ] + random_factor * Fr(scalar)
+            if base_comp not in self.base_scalar_map:
+                self.base_scalar_map[base_comp] = Scalar(0)
+            self.base_scalar_map[base_comp] = self.base_scalar_map[base_comp] + random_factor * scalar
 
     def verify(self):
         bases: List[Tuple[int, int]]
-        scalars: List[Fr]
+        scalars: List[Scalar]
         bases, scalars = map(list, zip(*self.base_scalar_map.items()))  # type: ignore
         computed = compute_MSM(
-            list(map(lambda t: affine_to_projective((FQ(t[0]), FQ(t[1]))), bases)),
-            list(map(int, scalars)),
+            list(map(lambda t: G1Point.from_compressed_bytes_unchecked(t), bases)),
+            scalars,
         )
-        # print("bases", bases, "scalars", scalars, "computed", normalize(computed), "expected", normalize(self.A_c), "eq", eq(computed, self.A_c))
-        assert eq(computed, self.A_c)
+        assert computed == self.A_c

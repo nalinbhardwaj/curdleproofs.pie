@@ -1,5 +1,4 @@
 import json
-import random
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.ipa import generate_blinders
 from curdleproofs.util import (
@@ -9,25 +8,18 @@ from curdleproofs.util import (
     points_projective_to_bytes,
     BufReader,
     g1_to_bytes,
+    random_scalar,
+    Z1,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Tuple, Type, TypeVar
-from curdleproofs.util import (
-    PointProjective,
-    Fr,
-    get_permutation,
-)
+from curdleproofs.util import get_permutation, g1_is_inf
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    add,
-    Z1,
-    is_inf,
-)
 from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
 from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.commitment import GroupCommitment
+from py_arkworks_bls12381 import G1Point, Scalar
 
 N_BLINDERS = 4
 
@@ -37,11 +29,11 @@ T_CurdleProofsProof = TypeVar("T_CurdleProofsProof", bound="CurdleProofsProof")
 class CurdleProofsProof:
     def __init__(
         self,
-        A: PointProjective,
+        A: G1Point,
         cm_T: GroupCommitment,
         cm_U: GroupCommitment,
-        R: PointProjective,
-        S: PointProjective,
+        R: G1Point,
+        S: G1Point,
         same_perm_proof: SamePermutationProof,
         same_scalar_proof: SameScalarProof,
         same_msm_proof: SameMSMProof,
@@ -59,14 +51,14 @@ class CurdleProofsProof:
     def new(
         cls: Type[T_CurdleProofsProof],
         crs: CurdleproofsCrs,
-        vec_R: List[PointProjective],
-        vec_S: List[PointProjective],
-        vec_T: List[PointProjective],
-        vec_U: List[PointProjective],
-        M: PointProjective,
+        vec_R: List[G1Point],
+        vec_S: List[G1Point],
+        vec_T: List[G1Point],
+        vec_U: List[G1Point],
+        M: G1Point,
         permutation: List[int],
-        k: Fr,
-        vec_m_blinders: List[Fr],
+        k: Scalar,
+        vec_m_blinders: List[Scalar],
     ) -> T_CurdleProofsProof:
         ell = len(vec_R)
 
@@ -79,13 +71,10 @@ class CurdleProofsProof:
         vec_a = transcript.get_and_append_challenges(b"curdleproofs_vec_a", ell)
 
         vec_a_blinders = generate_blinders(N_BLINDERS - 2)
-        vec_r_a_prime = vec_a_blinders + [Fr.zero(), Fr.zero()]
+        vec_r_a_prime = vec_a_blinders + [Scalar(0), Scalar(0)]
         vec_a_permuted = get_permutation(vec_a, permutation)
 
-        A = add(
-            compute_MSM(crs.vec_G, vec_a_permuted),
-            compute_MSM(crs.vec_H, vec_r_a_prime),
-        )
+        A = compute_MSM(crs.vec_G, vec_a_permuted) + compute_MSM(crs.vec_H, vec_r_a_prime)
 
         same_perm_proof = SamePermutationProof.new(
             crs_G_vec=crs.vec_G,
@@ -100,16 +89,16 @@ class CurdleProofsProof:
             transcript=transcript,
         )
 
-        r_t = Fr(random.randint(1, Fr.field_modulus))
-        r_u = Fr(random.randint(1, Fr.field_modulus))
+        r_t = random_scalar()
+        r_u = random_scalar()
         R = compute_MSM(vec_R, vec_a)
         S = compute_MSM(vec_S, vec_a)
 
         cm_T: GroupCommitment = GroupCommitment.new(
-            crs.G_t, crs.H, multiply(R, int(k)), r_t
+            crs.G_t, crs.H, R * k, r_t
         )
         cm_U: GroupCommitment = GroupCommitment.new(
-            crs.G_u, crs.H, multiply(S, int(k)), r_u
+            crs.G_u, crs.H, S * k, r_u
         )
 
         same_scalar_proof = SameScalarProof.new(
@@ -126,7 +115,7 @@ class CurdleProofsProof:
             transcript=transcript,
         )
 
-        A_prime = add(add(A, cm_T.T_1), cm_U.T_1)
+        A_prime = A + cm_T.T_1 + cm_U.T_1
 
         vec_G_with_blinders = (
             crs.vec_G + crs.vec_H[: (N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
@@ -173,18 +162,18 @@ class CurdleProofsProof:
     def verify(
         self,
         crs: CurdleproofsCrs,
-        vec_R: List[PointProjective],
-        vec_S: List[PointProjective],
-        vec_T: List[PointProjective],
-        vec_U: List[PointProjective],
-        M: PointProjective,
+        vec_R: List[G1Point],
+        vec_S: List[G1Point],
+        vec_T: List[G1Point],
+        vec_U: List[G1Point],
+        M: G1Point,
     ):
         ell = len(vec_R)
 
         transcript = CurdleproofsTranscript(b"curdleproofs")
         msm_accumulator = MSMAccumulator()
 
-        if is_inf(vec_T[0]):
+        if g1_is_inf(vec_T[0]):
             raise Exception("vec_T[0] is infinity")
 
         transcript.append_list(
@@ -218,7 +207,7 @@ class CurdleProofsProof:
             transcript=transcript,
         )
 
-        A_prime = add(add(self.A, self.cm_T.T_1), self.cm_U.T_1)
+        A_prime = self.A + self.cm_T.T_1 + self.cm_U.T_1
 
         vec_G_with_blinders = (
             crs.vec_G + crs.vec_H[: (N_BLINDERS - 2)] + [crs.G_t, crs.G_u]
@@ -311,23 +300,23 @@ class CurdleProofsProof:
 
 def shuffle_permute_and_commit_input(
     crs: CurdleproofsCrs,
-    vec_R: List[PointProjective],
-    vec_S: List[PointProjective],
+    vec_R: List[G1Point],
+    vec_S: List[G1Point],
     permutation: List[int],
-    k: Fr,
-) -> Tuple[List[PointProjective], List[PointProjective], PointProjective, List[Fr]]:
+    k: Scalar,
+) -> Tuple[List[G1Point], List[G1Point], G1Point, List[Scalar]]:
     ell = len(crs.vec_G)
 
-    vec_T = [multiply(R, int(k)) for R in vec_R]
-    vec_U = [multiply(S, int(k)) for S in vec_S]
+    vec_T = [R * k for R in vec_R]
+    vec_U = [S * k for S in vec_S]
     vec_T = get_permutation(vec_T, permutation)
     vec_U = get_permutation(vec_U, permutation)
 
-    range_as_fr = [Fr(i) for i in range(ell)]
+    range_as_fr = [Scalar(i) for i in range(ell)]
     sigma_ell = get_permutation(range_as_fr, permutation)
 
     vec_m_blinders = generate_blinders(N_BLINDERS)
-    M = add(compute_MSM(crs.vec_G, sigma_ell), compute_MSM(crs.vec_H, vec_m_blinders))
+    M = compute_MSM(crs.vec_G, sigma_ell) + compute_MSM(crs.vec_H, vec_m_blinders)
 
     return vec_T, vec_U, M, vec_m_blinders
 
@@ -338,11 +327,11 @@ T_VerifierInput = TypeVar("T_VerifierInput", bound="VerifierInput")
 class VerifierInput:
     def __init__(
         self,
-        vec_R: List[PointProjective],
-        vec_S: List[PointProjective],
-        vec_T: List[PointProjective],
-        vec_U: List[PointProjective],
-        M: PointProjective,
+        vec_R: List[G1Point],
+        vec_S: List[G1Point],
+        vec_T: List[G1Point],
+        vec_U: List[G1Point],
+        M: G1Point,
     ) -> None:
         self.vec_R = vec_R
         self.vec_S = vec_S

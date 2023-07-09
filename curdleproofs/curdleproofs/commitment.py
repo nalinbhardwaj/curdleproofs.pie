@@ -1,55 +1,50 @@
 from typing import Type, TypeVar
 from curdleproofs.util import (
-    PointProjective,
-    Fr,
     point_projective_from_json,
     point_projective_to_json,
     BufReader,
     g1_to_bytes,
 )
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    add,
-    eq,
-)
+from py_arkworks_bls12381 import G1Point, Scalar
+
 
 T_GroupCommitment = TypeVar("T_GroupCommitment", bound="GroupCommitment")
 
 
 class GroupCommitment:
-    T_1: PointProjective
-    T_2: PointProjective
+    T_1: G1Point
+    T_2: G1Point
 
-    def __init__(self, T_1: PointProjective, T_2: PointProjective) -> None:
+    def __init__(self, T_1: G1Point, T_2: G1Point) -> None:
         self.T_1 = T_1
         self.T_2 = T_2
 
     @classmethod
     def new(
         cls: Type[T_GroupCommitment],
-        crs_G: PointProjective,
-        crs_H: PointProjective,
-        T: PointProjective,
-        r: Fr,
+        crs_G: G1Point,
+        crs_H: G1Point,
+        T: G1Point,
+        r: Scalar,
     ) -> T_GroupCommitment:
-        return cls(multiply(crs_G, int(r)), add(T, multiply(crs_H, int(r))))
+        return cls(crs_G * r, T + crs_H * r)
 
     def __add__(self: T_GroupCommitment, other: object) -> T_GroupCommitment:
         if not isinstance(other, GroupCommitment):
             return NotImplemented
-        return type(self)(add(self.T_1, other.T_1), add(self.T_2, other.T_2))
+        return type(self)(self.T_1 + other.T_1, self.T_2 + other.T_2)
 
     def __mul__(self: T_GroupCommitment, other: object) -> T_GroupCommitment:
-        if not isinstance(other, Fr):
+        if not isinstance(other, Scalar):
             return NotImplemented
         return type(self)(
-            multiply(self.T_1, int(other)), multiply(self.T_2, int(other))
+            self.T_1 * other, self.T_2 * other
         )
 
     def __eq__(self: T_GroupCommitment, __o: object) -> bool:
         if not isinstance(__o, GroupCommitment):
             return NotImplemented
-        return eq(self.T_1, __o.T_1) and eq(self.T_2, __o.T_2)
+        return self.T_1 == __o.T_1 and self.T_2 == __o.T_2
 
     def to_json(self):
         return {

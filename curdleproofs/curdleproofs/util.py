@@ -1,74 +1,71 @@
 from random import randint
 from math import log2
-from typing import List, Tuple, Type, TypeVar, Union
-from py_ecc.typing import (
-    Optimized_Field,
-    Optimized_Point2D,
-    Optimized_Point3D,
-    FQ as FQ_type,
-)
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
-    multiply,
-    normalize,
-    FQ,
-)
-from py_ecc.bls.hash import os2ip
-from py_ecc.bls.g2_primitives import pubkey_to_G1
-from eth_typing import BLSPubkey
-from py_ecc.bls.point_compression import compress_G1
+from typing import List, TypeVar, NewType
+from py_arkworks_bls12381 import G1Point, Scalar
 
 
-class Fr(FQ_type):
-    field_modulus: int = curve_order
+CURVE_ORDER = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+# Generator
+G1 = G1Point()
+# Point at infinity over FQ
+Z1 = G1Point.identity()
 
 
-PointAffine = Optimized_Point2D[Optimized_Field]
-PointProjective = Optimized_Point3D[Optimized_Field]
+BLSPubkey = NewType('BLSPubkey', bytes)  # bytes48
 
 
-def point_affine_to_bytes(point: PointAffine) -> bytes:
-    return point[0].n.to_bytes(48, "big") + point[1].n.to_bytes(48, "big")
+def g1_is_inf(point: G1Point):
+    return point == G1
 
 
-def points_affine_to_bytes(points: List[PointAffine]) -> List[bytes]:
-    return [point_affine_to_bytes(point) for point in points]
+def random_scalar() -> Scalar:
+    # Note: the constructor 'Scalar()' errors with integers of more than 128 bits
+    # Scalar.from_le_bytes() requires integers less than  CURVE_ORDER
+    return Scalar.from_le_bytes(randint(1, CURVE_ORDER - 1).to_bytes(32, 'little'))
 
 
-def point_projective_to_bytes(point: PointProjective) -> bytes:
-    return point_affine_to_bytes(normalize(point))
+def point_projective_to_bytes(point: G1Point) -> bytes:
+    return bytes(point.to_compressed_bytes())
 
 
-def points_projective_to_bytes(points: List[PointProjective]) -> List[bytes]:
+def points_projective_to_bytes(points: List[G1Point]) -> List[bytes]:
     return [point_projective_to_bytes(point) for point in points]
 
 
-def field_to_bytes(field: Fr) -> bytes:
-    return field.n.to_bytes(48, "big")
+def point_projective_from_bytes(b: bytes) -> G1Point:
+    return G1Point.from_compressed_bytes_unchecked(b)
 
 
-def fields_to_bytes(fields: List[Fr]) -> List[bytes]:
+def field_to_bytes(field: Scalar) -> bytes:
+    return bytes(field.to_le_bytes())
+
+
+def fields_to_bytes(fields: List[Scalar]) -> List[bytes]:
     return [field_to_bytes(field) for field in fields]
 
 
-def affine_to_projective(point: PointAffine) -> PointProjective:
-    return (point[0], point[1], FQ.one())
+def g1_from_bytes(b: bytes, offset_point: int) -> G1Point:
+    return point_projective_from_bytes(BLSPubkey(b[48 * offset_point:48 * (offset_point + 1)]))
 
 
-def g1_from_bytes(b: bytes, offset_point: int) -> PointProjective:
-    return pubkey_to_G1(BLSPubkey(b[48 * offset_point:48 * (offset_point + 1)]))
-
-
-def invert(f: Fr) -> Fr:
-    res = Fr.one() / f
-    assert res * f == Fr.one()  # fail in case f == 0
+def invert(f: Scalar) -> Scalar:
+    res = f.inverse()
+    assert res * f == Scalar(1)  # fail in case f == 0
     return res
 
 
-def get_random_point() -> PointProjective:
-    a = randint(1, curve_order - 1)
-    return multiply(G1, a)
+def scalar_pow(f: Scalar, n: int) -> Scalar:
+    result = Scalar(1)
+    while n != 0:
+        if n % 2 == 1:
+            result *= f
+        f *= f
+        n //= 2
+    return result
+
+
+def get_random_point() -> G1Point:
+    return G1 * random_scalar()
 
 
 def get_verification_scalars_bitstring(n: int, lg_n: int) -> List[List[int]]:
@@ -81,61 +78,54 @@ def get_verification_scalars_bitstring(n: int, lg_n: int) -> List[List[int]]:
     return bitstrings
 
 
-def generate_blinders(n: int) -> List[Fr]:
-    return [Fr(randint(0, Fr.field_modulus)) for _ in range(0, n)]
+def generate_blinders(n: int) -> List[Scalar]:
+    return [random_scalar() for _ in range(0, n)]
 
 
-def inner_product(a: List[Fr], b: List[Fr]) -> Fr:
+def inner_product(a: List[Scalar], b: List[Scalar]) -> Scalar:
     assert len(a) == len(b)
-    return sum([a[i] * b[i] for i in range(0, len(a))], Fr.zero())
+    return sum([a[i] * b[i] for i in range(0, len(a))], Scalar(0))
 
 
 T_GET_PERMUTATION = TypeVar("T_GET_PERMUTATION")
 
 
 def get_permutation(
-    vec_a: List[T_GET_PERMUTATION], permutation: Union[List[Fr], List[int]]
+    vec_a: List[T_GET_PERMUTATION], permutation: List[int]
 ) -> List[T_GET_PERMUTATION]:
     return [vec_a[int(i)] for i in permutation]
 
 
-def field_to_json(f: FQ_type) -> str:
-    return str(int(f))
+def field_to_json(f: Scalar) -> str:
+    return bytes(f.to_le_bytes()).hex()
 
 
-T_JSON_FIELD = TypeVar("T_JSON_FIELD", Fr, FQ)
+def field_from_json(s: str) -> Scalar:
+    return Scalar.from_le_bytes(bytes.fromhex(s))
 
 
-def field_from_json(s: str, field: Type[T_JSON_FIELD]) -> T_JSON_FIELD:
-    return field(int(s))
+def scalar_from_bytes(b: bytes) -> Scalar:
+    return Scalar.from_le_bytes(b)
 
 
-def point_affine_to_json(p: PointAffine) -> Tuple[str, str]:
-    return (field_to_json(p[0]), field_to_json(p[1]))
+def point_projective_to_json(p: G1Point) -> str:
+    return bytes(p.to_compressed_bytes()).hex()
 
 
-def point_projective_to_json(p: PointProjective) -> Tuple[str, str]:
-    return point_affine_to_json(normalize(p))
+def point_projective_from_json(p_hex: str) -> G1Point:
+    return G1Point.from_compressed_bytes_unchecked(bytes.fromhex(p_hex))
 
 
-def point_affine_from_json(t: Tuple[str, str]) -> PointAffine:
-    return (field_from_json(t[0], FQ), field_from_json(t[1], FQ))
+def g1_to_bytes(p: G1Point) -> bytes:
+    return bytes(p.to_compressed_bytes())
 
 
-def point_projective_from_json(t: Tuple[str, str]) -> PointProjective:
-    return affine_to_projective(point_affine_from_json(t))
-
-
-def g1_to_bytes(p: PointProjective) -> bytes:
-    return compress_G1(p).to_bytes(48, 'big')
-
-
-def g1_list_to_bytes(ps: List[PointProjective]) -> bytes:
+def g1_list_to_bytes(ps: List[G1Point]) -> bytes:
     return b''.join([g1_to_bytes(p) for p in ps])
 
 
-def fr_to_bytes(fr: Fr) -> bytes:
-    return fr.n.to_bytes(48, "big")
+def fr_to_bytes(fr: Scalar) -> bytes:
+    return field_to_bytes(fr)
 
 
 def log2_int(x: int) -> int:
@@ -150,14 +140,14 @@ class BufReader:
         self.data = data
         self.ptr = 0
 
-    def read_g1(self) -> PointProjective:
+    def read_g1(self) -> G1Point:
         end_ptr = self.ptr + 48
-        p = pubkey_to_G1(BLSPubkey(self.data[self.ptr:end_ptr]))
+        p = point_projective_from_bytes(BLSPubkey(self.data[self.ptr:end_ptr]))
         self.ptr = end_ptr
         return p
 
-    def read_fr(self) -> Fr:
-        end_ptr = self.ptr + 48
-        p = Fr(os2ip(self.data[self.ptr:end_ptr]))
+    def read_fr(self) -> Scalar:
+        end_ptr = self.ptr + 32
+        p = scalar_from_bytes(self.data[self.ptr:end_ptr])
         self.ptr = end_ptr
         return p

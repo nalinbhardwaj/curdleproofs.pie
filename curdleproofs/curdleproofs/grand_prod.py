@@ -9,27 +9,19 @@ from curdleproofs.util import (
     BufReader,
     g1_to_bytes,
     fr_to_bytes,
+    scalar_pow,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, TypeVar, Type
-from curdleproofs.util import (
-    PointProjective,
-    Fr,
-    field_to_bytes,
-)
+from curdleproofs.util import field_to_bytes
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    add,
-    neg,
-    eq,
-)
+from py_arkworks_bls12381 import G1Point, Scalar
 
 T_GrandProductProof = TypeVar("T_GrandProductProof", bound="GrandProductProof")
 
 
 class GrandProductProof:
-    def __init__(self, C: PointProjective, r_p: Fr, ipa_proof: IPA):
+    def __init__(self, C: G1Point, r_p: Scalar, ipa_proof: IPA):
         self.C = C
         self.r_p = r_p
         self.ipa_proof = ipa_proof
@@ -37,13 +29,13 @@ class GrandProductProof:
     @classmethod
     def new(
         cls: Type[T_GrandProductProof],
-        crs_G_vec: List[PointProjective],
-        crs_H_vec: List[PointProjective],
-        crs_U: PointProjective,
-        B: PointProjective,
-        gprod_result: Fr,
-        vec_b: List[Fr],
-        vec_b_blinders: List[Fr],
+        crs_G_vec: List[G1Point],
+        crs_H_vec: List[G1Point],
+        crs_U: G1Point,
+        B: G1Point,
+        gprod_result: Scalar,
+        vec_b: List[Scalar],
+        vec_b_blinders: List[Scalar],
         transcript: CurdleproofsTranscript,
     ) -> T_GrandProductProof:
         n_blinders = len(vec_b_blinders)
@@ -54,12 +46,12 @@ class GrandProductProof:
         alpha = transcript.get_and_append_challenge(b"gprod_alpha")
 
         # Step 2
-        vec_c = [Fr.one()]
+        vec_c = [Scalar(1)]
         for i in range(0, ell - 1):
             vec_c.append(vec_c[i] * vec_b[i])
 
         vec_c_blinders = generate_blinders(n_blinders)
-        C = add(compute_MSM(crs_G_vec, vec_c), compute_MSM(crs_H_vec, vec_c_blinders))
+        C = compute_MSM(crs_G_vec, vec_c) + compute_MSM(crs_H_vec, vec_c_blinders)
 
         vec_r_b_plus_alpha = [r_b_i + alpha for r_b_i in vec_b_blinders]
         r_p = inner_product(vec_r_b_plus_alpha, vec_c_blinders)
@@ -70,40 +62,37 @@ class GrandProductProof:
         beta_inv = invert(beta)
 
         pow_beta_inv = beta_inv
-        vec_G_prime: List[PointProjective] = []
+        vec_G_prime: List[G1Point] = []
         for G_i in crs_G_vec:
-            G_prime = multiply(G_i, int(pow_beta_inv))
+            G_prime = G_i * pow_beta_inv
             vec_G_prime.append(G_prime)
             pow_beta_inv *= beta_inv
 
-        vec_H_prime = [multiply(H_i, int(beta_inv ** (ell + 1))) for H_i in crs_H_vec]
+        vec_H_prime = [H_i * scalar_pow(beta_inv, ell + 1) for H_i in crs_H_vec]
 
-        vec_b_prime: List[Fr] = []
+        vec_b_prime: List[Scalar] = []
         pow_beta = beta
         for b_i in vec_b:
             vec_b_prime.append(b_i * pow_beta)
             pow_beta *= beta
 
-        vec_d: List[Fr] = []
-        pow_beta = Fr.one()
-        vec_beta_powers: List[Fr] = []
+        vec_d: List[Scalar] = []
+        pow_beta = Scalar(1)
+        vec_beta_powers: List[Scalar] = []
         for b_prime_i in vec_b_prime:
             vec_d.append(b_prime_i - pow_beta)
             vec_beta_powers.append(pow_beta)
             pow_beta *= beta
 
-        vec_d_blinders = [(beta ** (ell + 1)) * r_b_i for r_b_i in vec_r_b_plus_alpha]
+        vec_d_blinders = [scalar_pow(beta, ell + 1) * r_b_i for r_b_i in vec_r_b_plus_alpha]
 
-        vec_alphabeta = [alpha * (beta ** (ell + 1)) for _ in range(n_blinders)]
-        D = add(
-            add(B, neg(compute_MSM(vec_G_prime, vec_beta_powers))),
-            compute_MSM(vec_H_prime, vec_alphabeta),
-        )
+        vec_alphabeta = [alpha * scalar_pow(beta, ell + 1) for _ in range(n_blinders)]
+        D = B - compute_MSM(vec_G_prime, vec_beta_powers) + compute_MSM(vec_H_prime, vec_alphabeta)
 
         vec_G = crs_G_vec + crs_H_vec
         vec_G_prime += vec_H_prime
 
-        inner_prod = r_p * (beta ** (ell + 1)) + gprod_result * (beta**ell) - Fr.one()
+        inner_prod = r_p * scalar_pow(beta, ell + 1) + gprod_result * scalar_pow(beta, ell) - Scalar(1)
 
         vec_c += vec_c_blinders
         vec_d += vec_d_blinders
@@ -112,8 +101,8 @@ class GrandProductProof:
         # print("computed", inner_product(vec_c, vec_d))
 
         assert inner_product(vec_c, vec_d) == inner_prod
-        assert eq(compute_MSM(vec_G, vec_c), C)
-        assert eq(compute_MSM(vec_G_prime, vec_d), D)
+        assert compute_MSM(vec_G, vec_c) == C
+        assert compute_MSM(vec_G_prime, vec_d) == D
 
         ipa_proof = IPA.new(
             crs_G_vec=vec_G,
@@ -131,13 +120,13 @@ class GrandProductProof:
 
     def verify(
         self,
-        crs_G_vec: List[PointProjective],
-        crs_H_vec: List[PointProjective],
-        crs_U: PointProjective,
-        crs_G_sum: PointProjective,
-        crs_H_sum: PointProjective,
-        B: PointProjective,
-        gprod_result: Fr,
+        crs_G_vec: List[G1Point],
+        crs_H_vec: List[G1Point],
+        crs_U: G1Point,
+        crs_G_sum: G1Point,
+        crs_H_sum: G1Point,
+        B: G1Point,
+        gprod_result: Scalar,
         n_blinders: int,
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
@@ -157,26 +146,23 @@ class GrandProductProof:
 
         # Step 3
         # Build `vec_u` for the optimization trick
-        vec_u: List[Fr] = []
+        vec_u: List[Scalar] = []
         pow_beta_inv = beta_inv
         for _ in range(0, ell):
             vec_u.append(pow_beta_inv)
             pow_beta_inv *= beta_inv
 
-        vec_u.extend([beta_inv ** (ell + 1) for _ in range(0, n_blinders)])
+        vec_u.extend([scalar_pow(beta_inv, ell + 1) for _ in range(0, n_blinders)])
 
         # Compute D
-        D = add(
-            add(B, neg(multiply(crs_G_sum, int(beta_inv)))),
-            multiply(crs_H_sum, int(alpha)),
-        )
+        D = B - crs_G_sum * beta_inv + crs_H_sum * alpha
 
         # Step 4
         # Build G
         vec_G = crs_G_vec + crs_H_vec
 
         inner_prod = (
-            self.r_p * (beta ** (ell + 1)) + gprod_result * (beta**ell) - Fr.one()
+            self.r_p * scalar_pow(beta, ell + 1) + gprod_result * scalar_pow(beta, ell) - Scalar(1)
         )
 
         self.ipa_proof.verify(
@@ -201,7 +187,7 @@ class GrandProductProof:
     def from_json(cls: Type[T_GrandProductProof], json) -> T_GrandProductProof:
         return cls(
             C=point_projective_from_json(json["C"]),
-            r_p=field_from_json(json["r_p"], Fr),
+            r_p=field_from_json(json["r_p"]),
             ipa_proof=IPA.from_json(json["ipa_proof"]),
         )
 

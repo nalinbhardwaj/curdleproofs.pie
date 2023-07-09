@@ -14,8 +14,6 @@ from curdleproofs.util import (
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Tuple, Type, TypeVar
 from curdleproofs.util import (
-    PointProjective,
-    Fr,
     field_to_bytes,
     invert,
     generate_blinders,
@@ -23,13 +21,10 @@ from curdleproofs.util import (
     get_verification_scalars_bitstring,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    add,
-)
+from py_arkworks_bls12381 import G1Point, Scalar
 
 
-def generate_ipa_blinders(c: List[Fr], d: List[Fr]) -> Tuple[List[Fr], List[Fr]]:
+def generate_ipa_blinders(c: List[Scalar], d: List[Scalar]) -> Tuple[List[Scalar], List[Scalar]]:
     n = len(c)
 
     r = generate_blinders(n)
@@ -47,8 +42,8 @@ def generate_ipa_blinders(c: List[Fr], d: List[Fr]) -> Tuple[List[Fr], List[Fr]]
 
     z += [penultimate_z, last_z]
 
-    assert inner_product(r, d) + inner_product(z, c) == Fr.zero()
-    assert inner_product(r, z) == Fr.zero()
+    assert inner_product(r, d) + inner_product(z, c) == Scalar(0)
+    assert inner_product(r, z) == Scalar(0)
 
     return (r, z)
 
@@ -59,14 +54,14 @@ T_IPA = TypeVar("T_IPA", bound="IPA")
 class IPA:
     def __init__(
         self,
-        B_c: PointProjective,
-        B_d: PointProjective,
-        vec_L_C: List[PointProjective],
-        vec_R_C: List[PointProjective],
-        vec_L_D: List[PointProjective],
-        vec_R_D: List[PointProjective],
-        c_final: Fr,
-        d_final: Fr,
+        B_c: G1Point,
+        B_d: G1Point,
+        vec_L_C: List[G1Point],
+        vec_R_C: List[G1Point],
+        vec_L_D: List[G1Point],
+        vec_R_D: List[G1Point],
+        c_final: Scalar,
+        d_final: Scalar,
     ) -> None:
         self.B_c = B_c
         self.B_d = B_d
@@ -80,14 +75,14 @@ class IPA:
     @classmethod
     def new(
         cls: Type[T_IPA],
-        crs_G_vec: List[PointProjective],
-        crs_G_prime_vec: List[PointProjective],
-        crs_H: PointProjective,
-        C: PointProjective,
-        D: PointProjective,
-        z: Fr,
-        vec_c: List[Fr],
-        vec_d: List[Fr],
+        crs_G_vec: List[G1Point],
+        crs_G_prime_vec: List[G1Point],
+        crs_H: G1Point,
+        C: G1Point,
+        D: G1Point,
+        z: Scalar,
+        vec_c: List[Scalar],
+        vec_d: List[Scalar],
         transcript: CurdleproofsTranscript,
     ) -> T_IPA:
         n = len(vec_c)
@@ -112,12 +107,12 @@ class IPA:
         for i in range(0, n):
             vec_c[i] = vec_r_c[i] + alpha * vec_c[i]
             vec_d[i] = vec_r_d[i] + alpha * vec_d[i]
-        H = multiply(crs_H, int(beta))
+        H = crs_H * beta
 
-        vec_L_C: List[PointProjective] = []
-        vec_R_C: List[PointProjective] = []
-        vec_L_D: List[PointProjective] = []
-        vec_R_D: List[PointProjective] = []
+        vec_L_C: List[G1Point] = []
+        vec_R_C: List[G1Point] = []
+        vec_L_D: List[G1Point] = []
+        vec_R_D: List[G1Point] = []
 
         while len(vec_c) > 1:
             n //= 2
@@ -128,9 +123,9 @@ class IPA:
             G_L, G_R = crs_G_vec[:n], crs_G_vec[n:]
             G_prime_L, G_prime_R = crs_G_prime_vec[:n], crs_G_prime_vec[n:]
 
-            L_C = add(compute_MSM(G_R, c_L), multiply(H, int(inner_product(c_L, d_R))))
+            L_C = compute_MSM(G_R, c_L) + H * inner_product(c_L, d_R)
             L_D = compute_MSM(G_prime_L, d_R)
-            R_C = add(compute_MSM(G_L, c_R), multiply(H, int(inner_product(c_R, d_L))))
+            R_C = compute_MSM(G_L, c_R) + H * inner_product(c_R, d_L)
             R_D = compute_MSM(G_prime_R, d_L)
 
             vec_L_C.append(L_C)
@@ -147,8 +142,8 @@ class IPA:
             for i in range(0, n):
                 c_L[i] += gamma_inv * c_R[i]
                 d_L[i] += gamma * d_R[i]
-                G_L[i] = add(G_L[i], multiply(G_R[i], int(gamma)))
-                G_prime_L[i] = add(G_prime_L[i], multiply(G_prime_R[i], int(gamma_inv)))
+                G_L[i] = G_L[i] + G_R[i] * gamma
+                G_prime_L[i] = G_prime_L[i] + G_prime_R[i] * gamma_inv
 
             vec_c = c_L
             vec_d = d_L
@@ -159,7 +154,7 @@ class IPA:
 
     def verification_scalars(
         self, n: int, transcript: CurdleproofsTranscript
-    ) -> Tuple[List[Fr], List[Fr], List[Fr], List[Fr]]:
+    ) -> Tuple[List[Scalar], List[Scalar], List[Scalar], List[Scalar]]:
         lg_n = len(self.vec_L_C)
         if lg_n >= 32:
             raise Exception("vec_L_C too large")
@@ -168,7 +163,7 @@ class IPA:
 
         verification_scalars_bitstring = get_verification_scalars_bitstring(n, lg_n)
 
-        challenges: List[Fr] = []
+        challenges: List[Scalar] = []
         for i in range(0, lg_n):
             transcript.append_list(
                 b"ipa_loop",
@@ -180,9 +175,9 @@ class IPA:
 
         challenges_inv = [invert(c) for c in challenges]
 
-        vec_s: List[Fr] = []
+        vec_s: List[Scalar] = []
         for i in range(0, n):
-            vec_s.append(Fr.one())
+            vec_s.append(Scalar(1))
             for j in verification_scalars_bitstring[i]:
                 vec_s[i] = vec_s[i] * challenges[j]
 
@@ -192,12 +187,12 @@ class IPA:
 
     def verify(
         self,
-        crs_G_vec: List[PointProjective],
-        crs_H: PointProjective,
-        C: PointProjective,
-        D: PointProjective,
-        inner_prod: Fr,
-        vec_u: List[Fr],
+        crs_G_vec: List[G1Point],
+        crs_H: G1Point,
+        C: G1Point,
+        D: G1Point,
+        inner_prod: Scalar,
+        vec_u: List[Scalar],
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
     ):
@@ -222,16 +217,10 @@ class IPA:
         vec_rhs_scalars = vec_c_times_s + [self.c_final * self.d_final * beta]
         vec_G_H = crs_G_vec + [crs_H]
 
-        H = multiply(crs_H, int(beta))
-        C_a: PointProjective = add(
-            add(self.B_c, multiply(C, int(alpha))),
-            multiply(H, int(alpha * alpha * inner_prod)),
-        )
+        H = crs_H * beta
+        C_a = self.B_c + C * alpha + H * (alpha * alpha * inner_prod)
 
-        point_lhs = add(
-            add(compute_MSM(self.vec_L_C, vec_gamma), C_a),
-            compute_MSM(self.vec_R_C, vec_gamma_inv),
-        )
+        point_lhs = compute_MSM(self.vec_L_C, vec_gamma) + C_a + compute_MSM(self.vec_R_C, vec_gamma_inv)
 
         msm_accumulator.accumulate_check(point_lhs, vec_G_H, vec_rhs_scalars)
 
@@ -239,11 +228,8 @@ class IPA:
             self.d_final * (s_inv_i * u_i) for (s_inv_i, u_i) in zip(vec_s_inv, vec_u)
         ]
 
-        D_a = add(self.B_d, multiply(D, int(alpha)))
-        point_lhs = add(
-            add(compute_MSM(self.vec_L_D, vec_gamma), D_a),
-            compute_MSM(self.vec_R_D, vec_gamma_inv),
-        )
+        D_a = self.B_d + D * alpha
+        point_lhs = compute_MSM(self.vec_L_D, vec_gamma) + D_a + compute_MSM(self.vec_R_D, vec_gamma_inv)
         msm_accumulator.accumulate_check(point_lhs, crs_G_vec, vec_d_div_s)
 
     def to_json(self):
@@ -267,8 +253,8 @@ class IPA:
             vec_R_C=[point_projective_from_json(p) for p in json["vec_R_C"]],
             vec_L_D=[point_projective_from_json(p) for p in json["vec_L_D"]],
             vec_R_D=[point_projective_from_json(p) for p in json["vec_R_D"]],
-            c_final=field_from_json(json["c_final"], Fr),
-            d_final=field_from_json(json["d_final"], Fr),
+            c_final=field_from_json(json["c_final"]),
+            d_final=field_from_json(json["d_final"]),
         )
 
     def to_bytes(self) -> bytes:
