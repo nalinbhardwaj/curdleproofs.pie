@@ -45,7 +45,7 @@ class MSMAccumulator:
         self.A_c = self.A_c + C * random_factor
 
         for (base, scalar) in zip(bases, scalars):
-            # TODO: Is this infinity check necessary for G1Point class?
+            # note: optimization, zero bases contribute nothing to the MSM
             if g1_is_inf(base):
                 continue
 

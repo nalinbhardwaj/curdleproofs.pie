@@ -15,7 +15,7 @@ BLSPubkey = NewType('BLSPubkey', bytes)  # bytes48
 
 
 def g1_is_inf(point: G1Point):
-    return point == G1
+    return point == Z1
 
 
 def random_scalar() -> Scalar:
