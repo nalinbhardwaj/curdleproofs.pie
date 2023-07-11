@@ -1,26 +1,18 @@
 from functools import reduce
 import json
-from random import randint
 from typing import List, Type, TypeVar
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
-    multiply,
-    normalize,
     add,
-    Z1,
+    Z1
 )
 from curdleproofs.util import (
     PointProjective,
-    affine_to_projective,
     get_random_point,
     point_projective_from_json,
     point_projective_to_json,
     BufReader,
     g1_to_bytes,
 )
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
-from eth_typing import BLSPubkey
 
 T_CurdleproofsCrs = TypeVar("T_CurdleproofsCrs", bound="CurdleproofsCrs")
 
@@ -55,13 +47,13 @@ class CurdleproofsCrs:
     @classmethod
     def from_random_points(cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int, points: List[PointProjective]) -> T_CurdleproofsCrs:
         vec_G = points[0:ell]
-        vec_H = points[ell:ell+n_blinders]
+        vec_H = points[ell:ell + n_blinders]
         return cls(
             vec_G=vec_G,
             vec_H=vec_H,
-            H=points[ell+n_blinders + 0],
-            G_t=points[ell+n_blinders + 1],
-            G_u=points[ell+n_blinders + 2],
+            H=points[ell + n_blinders + 0],
+            G_t=points[ell + n_blinders + 1],
+            G_u=points[ell + n_blinders + 2],
             G_sum=reduce(add, vec_G, Z1),
             H_sum=reduce(add, vec_H, Z1),
         )
@@ -101,7 +93,7 @@ class CurdleproofsCrs:
             g1_to_bytes(self.G_sum),
             g1_to_bytes(self.H_sum),
         ])
-    
+
     @classmethod
     def from_bytes(cls: Type[T_CurdleproofsCrs], b: BufReader, ell: int, n_blinders: int) -> T_CurdleproofsCrs:
         return cls(

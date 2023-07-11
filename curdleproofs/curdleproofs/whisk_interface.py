@@ -1,32 +1,24 @@
 import random
-import json
-from typing import Container, Sequence, Tuple, Type, TypeVar
+from typing import Sequence, Tuple, Type, TypeVar
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.curdleproofs import (
-    N_BLINDERS,
     CurdleProofsProof,
     shuffle_permute_and_commit_input,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from curdleproofs.opening import TrackerOpeningProof
 from curdleproofs.util import (
-    PointAffine as BLSG1Point,
     PointProjective,
-    PointAffine,
-    affine_to_projective,
     point_projective_to_json,
     point_projective_from_json,
     Fr,
     BufReader,
     g1_to_bytes,
 )
-from py_ecc.optimized_bls12_381.optimized_curve import G1, normalize, multiply
-from py_ecc.bls.g2_primitives import (
-    G1_to_pubkey,
-    pubkey_to_G1,
-)
+from py_ecc.optimized_bls12_381.optimized_curve import G1, multiply
+from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
 from eth_typing import BLSPubkey
-from py_ecc.bls.hash import os2ip
+
 
 class WhiskTracker:
     r_G: BLSPubkey  # r * G
@@ -36,7 +28,9 @@ class WhiskTracker:
         self.r_G = r_G
         self.k_r_G = k_r_G
 
+
 T_WhiskShuffleProof = TypeVar("T_WhiskShuffleProof", bound="WhiskShuffleProof")
+
 
 class WhiskShuffleProof:
     M: PointProjective
@@ -58,7 +52,7 @@ class WhiskShuffleProof:
             M=point_projective_from_json(data["M"]),
             proof=CurdleProofsProof.from_json(data["proof"]),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             g1_to_bytes(self.M),

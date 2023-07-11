@@ -31,6 +31,9 @@ jobs:
         working-directory: curdleproofs
         run: |
           poetry run mypy .
+      - name: Curdleproofs - Lint with flake8
+        working-directory: curdleproofs
+        run: poetry run flake8
       - name: Curdleproofs - Test with pytest
         working-directory: curdleproofs
         run: |

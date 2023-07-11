@@ -1,46 +1,33 @@
 import json
-from math import log2
 import random
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.ipa import generate_blinders
 from curdleproofs.util import (
-    affine_to_projective,
-    point_affine_to_bytes,
     point_projective_from_json,
     point_projective_to_bytes,
     point_projective_to_json,
     points_projective_to_bytes,
-    get_random_point,
     BufReader,
     g1_to_bytes,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import List, Tuple, Type, TypeVar
 from curdleproofs.util import (
     PointProjective,
     Fr,
-    field_to_bytes,
-    invert,
     get_permutation,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
     multiply,
-    normalize,
     add,
-    neg,
     Z1,
     is_inf,
-    FQ,
 )
 from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
 from curdleproofs.same_scalar import SameScalarProof
 from curdleproofs.commitment import GroupCommitment
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
-from eth_typing import BLSPubkey
 
 N_BLINDERS = 4
 
@@ -303,7 +290,7 @@ class CurdleProofsProof:
             same_scalar_proof=SameScalarProof.from_json(json["same_scalar_proof"]),
             same_msm_proof=SameMSMProof.from_json(json["same_msm_proof"]),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             g1_to_bytes(self.A),

@@ -1,4 +1,3 @@
-import json
 from typing import Type, TypeVar
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 
@@ -9,7 +8,6 @@ from curdleproofs.util import (
     field_to_json,
     generate_blinders,
     point_projective_from_json,
-    point_projective_to_bytes,
     point_projective_to_json,
     points_projective_to_bytes,
     BufReader,
@@ -17,20 +15,11 @@ from curdleproofs.util import (
     fr_to_bytes,
 )
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
     G1,
     multiply,
-    normalize,
     add,
-    neg,
     eq,
 )
-from py_ecc.bls.g2_primitives import (
-    G1_to_pubkey,
-    pubkey_to_G1,
-)
-from py_ecc.bls.hash import i2osp, os2ip
-from eth_typing import BLSPubkey
 
 T_TrackerOpeningProof = TypeVar("T_TrackerOpeningProof", bound="TrackerOpeningProof")
 
@@ -113,7 +102,7 @@ class TrackerOpeningProof:
             g1_to_bytes(self.B),
             fr_to_bytes(self.s)
         ])
-    
+
     @classmethod
     def from_bytes(cls: Type[T_TrackerOpeningProof], b: BufReader) -> T_TrackerOpeningProof:
         return cls(

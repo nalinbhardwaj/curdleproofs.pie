@@ -12,12 +12,10 @@ from py_ecc.optimized_bls12_381.optimized_curve import (
     G1,
     multiply,
     normalize,
-    add,
-    neg,
     FQ,
 )
-from py_ecc.bls.hash import os2ip, i2osp
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
+from py_ecc.bls.hash import os2ip
+from py_ecc.bls.g2_primitives import pubkey_to_G1
 from eth_typing import BLSPubkey
 from py_ecc.bls.point_compression import compress_G1
 
@@ -157,7 +155,7 @@ class BufReader:
         p = pubkey_to_G1(BLSPubkey(self.data[self.ptr:end_ptr]))
         self.ptr = end_ptr
         return p
-    
+
     def read_fr(self) -> Fr:
         end_ptr = self.ptr + 48
         p = Fr(os2ip(self.data[self.ptr:end_ptr]))

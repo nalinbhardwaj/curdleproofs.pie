@@ -1,18 +1,10 @@
-import json
 from math import log2
-import random
-from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.util import (
-    affine_to_projective,
     field_from_json,
     field_to_json,
-    point_affine_to_bytes,
     point_projective_from_json,
-    point_projective_to_bytes,
     point_projective_to_json,
-    points_affine_to_bytes,
     points_projective_to_bytes,
-    get_random_point,
     BufReader,
     g1_to_bytes,
     fr_to_bytes,
@@ -32,12 +24,8 @@ from curdleproofs.util import (
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
     multiply,
-    normalize,
     add,
-    neg,
 )
 
 
@@ -289,7 +277,7 @@ class IPA:
             c_final=field_from_json(json["c_final"], Fr),
             d_final=field_from_json(json["d_final"], Fr),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             g1_to_bytes(self.B_c),
@@ -301,7 +289,7 @@ class IPA:
             fr_to_bytes(self.c_final),
             fr_to_bytes(self.d_final),
         ])
-    
+
     @classmethod
     def from_bytes(cls: Type[T_IPA], b: BufReader, n: int) -> T_IPA:
         log2_n = log2_int(n)

@@ -1,9 +1,5 @@
 from functools import reduce
-import json
-
-from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.grand_prod import GrandProductProof
-from curdleproofs.ipa import generate_blinders
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Optional, Tuple, Type, TypeVar
 from curdleproofs.util import (
@@ -13,24 +9,17 @@ from curdleproofs.util import (
     point_projective_from_json,
     point_projective_to_json,
     points_projective_to_bytes,
-    get_random_point,
     get_permutation,
     BufReader,
     g1_to_bytes,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
-    curve_order,
-    G1,
     multiply,
-    normalize,
     add,
     neg,
-    Z1,
 )
 from operator import mul as op_mul
-from py_ecc.bls.g2_primitives import G1_to_pubkey, pubkey_to_G1
-from eth_typing import BLSPubkey
 
 T_SAME_PERM_PROOF = TypeVar("T_SAME_PERM_PROOF", bound="SamePermutationProof")
 
@@ -158,7 +147,7 @@ class SamePermutationProof:
             B=point_projective_from_json(json["B"]),
             grand_prod_proof=GrandProductProof.from_json(json["grand_prod_proof"]),
         )
-    
+
     def to_bytes(self) -> bytes:
         return b''.join([
             g1_to_bytes(self.B),
