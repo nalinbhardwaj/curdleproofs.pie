@@ -2,7 +2,7 @@ import random
 from curdleproofs.commitment import GroupCommitment
 from curdleproofs.util import field_from_json, field_to_json, points_projective_to_bytes
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import Tuple, Type, TypeVar
+from typing import Type, TypeVar
 from curdleproofs.util import (
     PointProjective,
     Fr,
@@ -81,7 +81,7 @@ class SameScalarProof:
         cm_T: GroupCommitment,
         cm_U: GroupCommitment,
         transcript: CurdleproofsTranscript,
-    ) -> Tuple[bool, str]:
+    ):
         transcript.append_list(
             b"sameexp_points",
             points_projective_to_bytes(
@@ -111,10 +111,7 @@ class SameScalarProof:
         computed_1 = self.cm_A + (cm_T * alpha)
         computed_2 = self.cm_B + (cm_U * alpha)
 
-        if expected_1 == computed_1 and expected_2 == computed_2:
-            return (True, "")
-        else:
-            return (False, "Failure")
+        assert expected_1 == computed_1 and expected_2 == computed_2
 
     def to_json(self):
         return {

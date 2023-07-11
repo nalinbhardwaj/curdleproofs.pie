@@ -14,7 +14,7 @@ from curdleproofs.util import (
     log2_int,
 )
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import List, Tuple, Type, TypeVar
 from curdleproofs.util import PointProjective, Fr, invert
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
 from py_ecc.optimized_bls12_381.optimized_curve import (
@@ -148,12 +148,12 @@ class SameMSMProof:
 
     def verification_scalars(
         self, n: int, transcript: CurdleproofsTranscript
-    ) -> Tuple[Optional[Tuple[List[Fr], List[Fr], List[Fr]]], str]:
+    ) -> Tuple[List[Fr], List[Fr], List[Fr]]:
         lg_n = len(self.vec_L_A)
         if lg_n >= 32:
-            return None, "lg_n >= 32"
+            raise Exception("lg_n >= 32")
         if 2**lg_n != n:
-            return None, "2**lg_n != n"
+            raise Exception("2**lg_n != n")
 
         bitstring = get_verification_scalars_bitstring(n, lg_n)
 
@@ -182,7 +182,7 @@ class SameMSMProof:
             for j in bitstring[i]:
                 vec_s[i] *= challenges[j]
 
-        return (challenges, challenges_inv, vec_s), ""
+        return (challenges, challenges_inv, vec_s)
 
     def verify(
         self,
@@ -194,7 +194,7 @@ class SameMSMProof:
         vec_U: List[PointProjective],
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
-    ) -> Tuple[bool, str]:
+    ):
         n = len(vec_T)
 
         transcript.append_list(
@@ -209,10 +209,7 @@ class SameMSMProof:
         )
         alpha = transcript.get_and_append_challenge(b"same_msm_alpha")
 
-        (ret, err) = self.verification_scalars(n, transcript)
-
-        if ret is None:
-            return False, err
+        ret = self.verification_scalars(n, transcript)
 
         vec_gamma, vec_gamma_inv, vec_s = ret
 
@@ -239,8 +236,6 @@ class SameMSMProof:
             compute_MSM(self.vec_R_U, vec_gamma_inv),
         )
         msm_accumulator.accumulate_check(point_lhs, vec_U, vec_x_times_s)
-
-        return True, ""
 
     def to_json(self):
         return {
