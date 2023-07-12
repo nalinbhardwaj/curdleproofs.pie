@@ -1,18 +1,16 @@
 from functools import reduce
 import json
 from typing import List, Type, TypeVar
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    add,
-    Z1
-)
 from curdleproofs.util import (
-    PointProjective,
     get_random_point,
     point_projective_from_json,
     point_projective_to_json,
     BufReader,
     g1_to_bytes,
+    Z1
 )
+from py_arkworks_bls12381 import G1Point
+
 
 T_CurdleproofsCrs = TypeVar("T_CurdleproofsCrs", bound="CurdleproofsCrs")
 
@@ -20,13 +18,13 @@ T_CurdleproofsCrs = TypeVar("T_CurdleproofsCrs", bound="CurdleproofsCrs")
 class CurdleproofsCrs:
     def __init__(
         self,
-        vec_G: List[PointProjective],
-        vec_H: List[PointProjective],
-        H: PointProjective,
-        G_t: PointProjective,
-        G_u: PointProjective,
-        G_sum: PointProjective,
-        H_sum: PointProjective,
+        vec_G: List[G1Point],
+        vec_H: List[G1Point],
+        H: G1Point,
+        G_t: G1Point,
+        G_u: G1Point,
+        G_sum: G1Point,
+        H_sum: G1Point,
     ) -> None:
         self.vec_G = vec_G
         self.vec_H = vec_H
@@ -41,11 +39,11 @@ class CurdleproofsCrs:
         cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int
     ) -> T_CurdleproofsCrs:
         count = ell + n_blinders + 3
-        points: List[PointProjective] = [get_random_point() for _ in range(0, count)]
+        points: List[G1Point] = [get_random_point() for _ in range(0, count)]
         return cls.from_random_points(ell, n_blinders, points)
 
     @classmethod
-    def from_random_points(cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int, points: List[PointProjective]) -> T_CurdleproofsCrs:
+    def from_random_points(cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int, points: List[G1Point]) -> T_CurdleproofsCrs:
         vec_G = points[0:ell]
         vec_H = points[ell:ell + n_blinders]
         return cls(
@@ -54,8 +52,8 @@ class CurdleproofsCrs:
             H=points[ell + n_blinders + 0],
             G_t=points[ell + n_blinders + 1],
             G_u=points[ell + n_blinders + 2],
-            G_sum=reduce(add, vec_G, Z1),
-            H_sum=reduce(add, vec_H, Z1),
+            G_sum=reduce(lambda a, b: a + b, vec_G, Z1),
+            H_sum=reduce(lambda a, b: a + b, vec_H, Z1),
         )
 
     def to_json(self) -> str:

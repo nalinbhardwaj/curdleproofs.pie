@@ -5,22 +5,22 @@ import pytest
 from curdleproofs.crs import CurdleproofsCrs
 from curdleproofs.grand_prod import GrandProductProof
 from curdleproofs.opening import TrackerOpeningProof
-from curdleproofs.util import affine_to_projective, get_random_point, get_permutation
+from curdleproofs.util import get_random_point, get_permutation
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List
 from curdleproofs.util import (
-    Fr,
     generate_blinders,
     inner_product,
+    field_to_bytes,
+    point_projective_to_bytes,
+    random_scalar,
+    scalar_pow,
+    G1,
+    Z1,
+    CURVE_ORDER,
+    BLSPubkey,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    G1,
-    multiply,
-    add,
-    Z1,
-)
-from py_ecc.bls.g2_primitives import G1_to_pubkey
 from curdleproofs.ipa import IPA
 from curdleproofs.same_perm import SamePermutationProof
 from curdleproofs.same_msm import SameMSMProof
@@ -39,7 +39,200 @@ from curdleproofs.whisk_interface import (
     IsValidWhiskOpeningProof,
     IsValidWhiskShuffleProof,
 )
-from eth_typing import BLSPubkey
+from py_arkworks_bls12381 import G1Point, Scalar
+
+
+def test_py_arkworks_bls12381_api():
+    print(dir(G1Point))
+    assert dir(G1Point) == [
+        '__add__',
+        '__class__',
+        '__delattr__',
+        '__dir__',
+        '__doc__',
+        '__eq__',
+        '__format__',
+        '__ge__',
+        '__getattribute__',
+        '__gt__',
+        '__hash__',
+        '__init__',
+        '__init_subclass__',
+        '__le__',
+        '__lt__',
+        '__module__',
+        '__mul__',
+        '__ne__',
+        '__neg__',
+        '__new__',
+        '__radd__',
+        '__reduce__',
+        '__reduce_ex__',
+        '__repr__',
+        '__rmul__',
+        '__rsub__',
+        '__setattr__',
+        '__sizeof__',
+        '__str__',
+        '__sub__',
+        '__subclasshook__',
+        'from_compressed_bytes',
+        'from_compressed_bytes_unchecked',
+        'identity',
+        'multiexp_unchecked',
+        'to_compressed_bytes'
+    ]
+
+    print(dir(Scalar))
+    assert dir(Scalar) == [
+        '__add__',
+        '__class__',
+        '__delattr__',
+        '__dir__',
+        '__doc__',
+        '__eq__',
+        '__format__',
+        '__ge__',
+        '__getattribute__',
+        '__gt__',
+        '__hash__',
+        '__init__',
+        '__init_subclass__',
+        '__le__',
+        '__lt__',
+        '__module__',
+        '__mul__',
+        '__ne__',
+        '__neg__',
+        '__new__',
+        '__radd__',
+        '__reduce__',
+        '__reduce_ex__',
+        '__repr__',
+        '__rmul__',
+        '__rsub__',
+        '__setattr__',
+        '__sizeof__',
+        '__str__',
+        '__sub__',
+        '__subclasshook__',
+        'from_le_bytes',
+        'inverse',
+        'is_zero',
+        'square',
+        'to_le_bytes'
+    ]
+
+
+# Copied from https://pypi.org/project/py-arkworks-bls12381/
+def test_py_arkworks_bls12381_g1points():
+    # G1Point and G2Point have the same methods implemented on them
+    # For brevity, I will only show one method using G1Point and G2Point
+    # The rest of the code will just use G1Point
+
+    # Point initialization -- This will be initialized to the g1 generator
+    g1_generator = G1Point()
+
+    # Identity element
+    identity = G1Point.identity()
+
+    # Equality -- We override eq and neq operators
+    assert g1_generator == g1_generator
+    assert g1_generator != identity
+
+    # Printing an element -- We override __str__ so when we print
+    # an element it prints in hex
+    print("identity: ", identity)
+    print("g1 generator: ", g1_generator)
+
+    # Point Addition/subtraction/Negation -- We override the add/sub/neg operators
+    gen = G1Point()
+    double_gen = gen + gen
+    assert double_gen - gen == gen
+    neg_gen = -gen
+    assert neg_gen + gen == identity
+
+    # Scalar multiplication
+    #
+    scalar = Scalar(4)
+    four_gen = gen * scalar
+    assert four_gen == gen + gen + gen + gen
+
+    # Serialisation
+    #
+    # serialising to/from a g1 point
+    # We don't expose the uncompressed form
+    # because it seems like its not needed
+    compressed_bytes = gen.to_compressed_bytes()
+    deserialised_point = G1Point.from_compressed_bytes(compressed_bytes)
+    # If the bytes being received are trusted, we can avoid
+    # doing subgroup checks
+    deserialised_point_unchecked = G1Point.from_compressed_bytes_unchecked(compressed_bytes)
+    assert deserialised_point == deserialised_point_unchecked
+    assert deserialised_point == gen
+
+    # Serialization
+    assert str(gen) == "97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb"
+    assert point_projective_to_bytes(gen) == bytes.fromhex("97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb")
+
+    # Indexing
+    point_a = G1 * Scalar(4)
+    point_a_copy = G1 * Scalar(4)
+    point_map = {}
+    # G1Point should not be hashable
+    with pytest.raises(TypeError):
+        point_map[point_a] = True
+    # Able to index by serialized form (inefficient)
+    point_map[point_projective_to_bytes(point_a)] = True
+    assert point_map[point_projective_to_bytes(point_a_copy)]
+
+
+def test_py_arkworks_bls12381_scalar():
+    scalar = Scalar(4)
+    assert field_to_bytes(scalar) == bytes.fromhex("0400000000000000000000000000000000000000000000000000000000000000")
+
+    assert CURVE_ORDER == 52435875175126190479447740508185965837690552500527637822603658699938581184513
+
+    # Why does Scalar does not support values over 2**128?
+    Scalar(2**128 - 1)
+    with pytest.raises(OverflowError):
+        Scalar(2**256 - 1)
+    with pytest.raises(OverflowError):
+        Scalar(CURVE_ORDER - 1)
+
+    # Deserialize from big integers
+    Scalar.from_le_bytes((CURVE_ORDER - 1).to_bytes(32, 'little'))
+    with pytest.raises(ValueError):
+        # Errors with `ValueError: Err From Rust: serialised data seems to be invalid`
+        Scalar.from_le_bytes((CURVE_ORDER).to_bytes(32, 'little'))
+
+
+def test_scalar_pow():
+    helper_test_scalar_pow(1, 1)
+    helper_test_scalar_pow(4, 1)
+    helper_test_scalar_pow(4, 2)
+    helper_test_scalar_pow(4, 3)
+    helper_test_scalar_pow(4, 4)
+    helper_test_scalar_pow(100, 2)
+    helper_test_scalar_pow(42, 6)
+    scalar_pow(random_scalar(), 128)
+
+
+def helper_test_scalar_pow(base: int, exponent: int):
+    res_scalar = scalar_pow(Scalar(base), exponent)
+    res = int.from_bytes(res_scalar.to_le_bytes(), byteorder='little')
+    assert res == base ** exponent
+
+
+def test_utils_point_projective_to_bytes():
+    scalar = Scalar(99)
+    point = G1 * scalar
+    point_projective_to_bytes(point) == bytes.fromhex("aa10e1055b14a89cc3261699524998732fddc4f30c76c1057eb83732a01416643eb015a932e4080c86f42e485973d240")
+
+
+def test_utils_get_random_point():
+    point = get_random_point()
+    assert point + G1 - point == G1
 
 
 def test_ipa():
@@ -50,14 +243,13 @@ def test_ipa():
     crs_G_vec = [get_random_point() for _ in range(0, n)]
 
     vec_u = generate_blinders(n)
-    crs_G_prime_vec = [multiply(G_i, int(u_i)) for (G_i, u_i) in zip(crs_G_vec, vec_u)]
+    crs_G_prime_vec = [G_i * u_i for (G_i, u_i) in zip(crs_G_vec, vec_u)]
     crs_H = get_random_point()
 
-    vec_b = [Fr(random.randint(1, Fr.field_modulus)) for _ in range(0, n)]
-    vec_c = [Fr(random.randint(1, Fr.field_modulus)) for _ in range(0, n)]
+    vec_b = [random_scalar() for _ in range(0, n)]
+    vec_c = [random_scalar() for _ in range(0, n)]
 
     z = inner_product(vec_b, vec_c)
-    print("prod = ", vec_b, vec_c, z)
 
     B = compute_MSM(crs_G_vec, vec_b)
     C = compute_MSM(crs_G_prime_vec, vec_c)
@@ -109,7 +301,7 @@ def test_ipa():
             crs_H=crs_H,
             C=B,
             D=C,
-            inner_prod=z + Fr.one(),
+            inner_prod=z + Scalar(1),
             vec_u=vec_u,
             transcript=transcript_wrong,
             msm_accumulator=msm_accumulator_wrong,
@@ -127,15 +319,15 @@ def test_gprod():
     crs_G_vec = [get_random_point() for _ in range(ell)]
     crs_H_vec = [get_random_point() for _ in range(n_blinders)]
     crs_U = get_random_point()
-    crs_G_sum = reduce(add, crs_G_vec, Z1)
-    crs_H_sum = reduce(add, crs_H_vec, Z1)
+    crs_G_sum = reduce(lambda a, b: a + b, crs_G_vec, Z1)
+    crs_H_sum = reduce(lambda a, b: a + b, crs_H_vec, Z1)
 
-    vec_b = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(ell)]
+    vec_b = [random_scalar() for _ in range(ell)]
     vec_b_blinders = generate_blinders(n_blinders)
 
-    gprod_result = reduce(operator.mul, vec_b, Fr.one())
+    gprod_result = reduce(operator.mul, vec_b, Scalar(1))
 
-    B = add(compute_MSM(crs_G_vec, vec_b), compute_MSM(crs_H_vec, vec_b_blinders))
+    B = compute_MSM(crs_G_vec, vec_b) + compute_MSM(crs_H_vec, vec_b_blinders)
 
     gprod_proof = GrandProductProof.new(
         crs_G_vec=crs_G_vec,
@@ -179,7 +371,7 @@ def test_gprod():
             crs_G_sum=crs_G_sum,
             crs_H_sum=crs_H_sum,
             B=B,
-            gprod_result=gprod_result + Fr.one(),
+            gprod_result=gprod_result + Scalar(1),
             n_blinders=n_blinders,
             transcript=transcript_verifier,
             msm_accumulator=msm_accumulator,
@@ -197,7 +389,7 @@ def test_gprod():
             crs_U=crs_U,
             crs_G_sum=crs_G_sum,
             crs_H_sum=crs_H_sum,
-            B=multiply(B, 3),
+            B=B * Scalar(3),
             gprod_result=gprod_result,
             n_blinders=n_blinders,
             transcript=transcript_verifier,
@@ -218,8 +410,8 @@ def test_same_permutation_proof():
     crs_H_vec = [get_random_point() for _ in range(0, n_blinders)]
 
     crs_U = get_random_point()
-    crs_G_sum = reduce(add, crs_G_vec, Z1)
-    crs_H_sum = reduce(add, crs_H_vec, Z1)
+    crs_G_sum = reduce(lambda a, b: a + b, crs_G_vec, Z1)
+    crs_H_sum = reduce(lambda a, b: a + b, crs_H_vec, Z1)
 
     vec_a_blinders = generate_blinders(n_blinders)
     vec_m_blinders = generate_blinders(n_blinders)
@@ -227,13 +419,11 @@ def test_same_permutation_proof():
     permutation = list(range(0, ell))
     random.shuffle(permutation)
 
-    vec_a = [Fr(random.randint(1, Fr.field_modulus - 1)) for _ in range(0, ell)]
+    vec_a = [random_scalar() for _ in range(0, ell)]
     vec_a_permuted = get_permutation(vec_a, permutation)
 
-    A = add(
-        compute_MSM(crs_G_vec, vec_a_permuted), compute_MSM(crs_H_vec, vec_a_blinders)
-    )
-    M = add(compute_MSM(crs_G_vec, permutation), compute_MSM(crs_H_vec, vec_m_blinders))
+    A = compute_MSM(crs_G_vec, vec_a_permuted) + compute_MSM(crs_H_vec, vec_a_blinders)
+    M = compute_MSM(crs_G_vec, map(Scalar, permutation)) + compute_MSM(crs_H_vec, vec_m_blinders)
 
     same_perm_proof = SamePermutationProof.new(
         crs_G_vec=crs_G_vec,
@@ -278,7 +468,7 @@ def test_same_msm():
 
     vec_T = [get_random_point() for _ in range(0, n)]
     vec_U = [get_random_point() for _ in range(0, n)]
-    vec_x = [Fr(random.randint(1, Fr.field_modulus)) for _ in range(0, n)]
+    vec_x = [random_scalar() for _ in range(0, n)]
 
     A = compute_MSM(crs_G_vec, vec_x)
     Z_t = compute_MSM(vec_T, vec_x)
@@ -324,12 +514,12 @@ def test_same_scalar_arg():
     R = get_random_point()
     S = get_random_point()
 
-    k = Fr(random.randint(1, Fr.field_modulus))
-    r_t = Fr(random.randint(1, Fr.field_modulus))
-    r_u = Fr(random.randint(1, Fr.field_modulus))
+    k = random_scalar()
+    r_t = random_scalar()
+    r_u = random_scalar()
 
-    cm_T = GroupCommitment.new(crs_G_t, crs_H, multiply(R, int(k)), r_t)
-    cm_U = GroupCommitment.new(crs_G_u, crs_H, multiply(S, int(k)), r_u)
+    cm_T = GroupCommitment.new(crs_G_t, crs_H, R * k, r_t)
+    cm_U = GroupCommitment.new(crs_G_u, crs_H, S * k, r_u)
 
     proof = SameScalarProof.new(
         crs_G_t=crs_G_t,
@@ -367,12 +557,12 @@ def test_group_commit():
     A = get_random_point()
     B = get_random_point()
 
-    r_a = Fr(random.randint(1, Fr.field_modulus))
-    r_b = Fr(random.randint(1, Fr.field_modulus))
+    r_a = random_scalar()
+    r_b = random_scalar()
 
     cm_a = GroupCommitment.new(crs_G, crs_H, A, r_a)
     cm_b = GroupCommitment.new(crs_G, crs_H, B, r_b)
-    cm_a_b = GroupCommitment.new(crs_G, crs_H, add(A, B), r_a + r_b)
+    cm_a_b = GroupCommitment.new(crs_G, crs_H, A + B, r_a + r_b)
 
     assert cm_a + cm_b == cm_a_b
 
@@ -385,7 +575,7 @@ def test_shuffle_argument():
 
     permutation = list(range(ell))
     random.shuffle(permutation)
-    k = Fr(random.randint(1, Fr.field_modulus))
+    k = random_scalar()
 
     vec_R = [get_random_point() for _ in range(ell)]
     vec_S = [get_random_point() for _ in range(ell)]
@@ -421,7 +611,7 @@ def test_bad_shuffle_argument():
 
     permutation = list(range(ell))
     random.shuffle(permutation)
-    k = Fr(random.randint(1, Fr.field_modulus))
+    k = random_scalar()
 
     vec_R = [get_random_point() for _ in range(ell)]
     vec_S = [get_random_point() for _ in range(ell)]
@@ -461,12 +651,12 @@ def test_bad_shuffle_argument():
         )
 
         shuffle_proof.verify(
-            crs, vec_R, vec_S, vec_T, vec_U, multiply(M, int(k))
+            crs, vec_R, vec_S, vec_T, vec_U, M * k
         )
 
-    another_k = Fr(random.randint(1, Fr.field_modulus))
-    another_vec_T = [multiply(affine_to_projective(T), int(another_k)) for T in vec_T]
-    another_vec_U = [multiply(affine_to_projective(U), int(another_k)) for U in vec_U]
+    another_k = random_scalar()
+    another_vec_T = [T * another_k for T in vec_T]
+    another_vec_U = [U * another_k for U in vec_U]
 
     with pytest.raises(AssertionError):
         shuffle_proof.verify(
@@ -482,7 +672,7 @@ def test_serde():
 
     permutation = list(range(ell))
     random.shuffle(permutation)
-    k = Fr(random.randint(1, Fr.field_modulus))
+    k = random_scalar()
 
     vec_R = [get_random_point() for _ in range(ell)]
     vec_S = [get_random_point() for _ in range(ell)]
@@ -542,9 +732,9 @@ def test_tracker_opening_proof():
     k = generate_blinders(1)[0]
     r = generate_blinders(1)[0]
 
-    k_G = multiply(G, int(k))
-    r_G = multiply(G, int(r))
-    k_r_G = multiply(r_G, int(k))
+    k_G = G * k
+    r_G = G * r
+    k_r_G = r_G * k
 
     transcript_prover = CurdleproofsTranscript(b"whisk_opening_proof")
     opening_proof = TrackerOpeningProof.new(
@@ -579,19 +769,19 @@ def test_whisk_interface_shuffle_proof():
     IsValidWhiskShuffleProof(crs, pre_trackers, post_trackers, shuffle_proof)
 
 
-def generate_random_k() -> Fr:
+def generate_random_k() -> Scalar:
     return generate_blinders(1)[0]
 
 
-def get_k_commitment(k: Fr) -> BLSPubkey:
-    return G1_to_pubkey(multiply(G1, int(k)))
+def get_k_commitment(k: Scalar) -> BLSPubkey:
+    return BLSPubkey(point_projective_to_bytes(G1 * k))
 
 
-def generate_tracker(k: Fr) -> WhiskTracker:
+def generate_tracker(k: Scalar) -> WhiskTracker:
     r = generate_blinders(1)[0]
-    r_G = multiply(G1, int(r))
-    k_r_G = multiply(r_G, int(k))
-    return WhiskTracker(G1_to_pubkey(r_G), G1_to_pubkey(k_r_G))
+    r_G = G1 * r
+    k_r_G = r_G * k
+    return WhiskTracker(BLSPubkey(point_projective_to_bytes(r_G)), BLSPubkey(point_projective_to_bytes(k_r_G)))
 
 
 def generate_random_crs(ell: int) -> CurdleproofsCrs:

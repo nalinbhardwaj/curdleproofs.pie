@@ -3,8 +3,6 @@ from curdleproofs.grand_prod import GrandProductProof
 from curdleproofs.curdleproofs_transcript import CurdleproofsTranscript
 from typing import List, Type, TypeVar
 from curdleproofs.util import (
-    PointProjective,
-    Fr,
     field_to_bytes,
     point_projective_from_json,
     point_projective_to_json,
@@ -14,33 +12,29 @@ from curdleproofs.util import (
     g1_to_bytes,
 )
 from curdleproofs.msm_accumulator import MSMAccumulator, compute_MSM
-from py_ecc.optimized_bls12_381.optimized_curve import (
-    multiply,
-    add,
-    neg,
-)
 from operator import mul as op_mul
+from py_arkworks_bls12381 import G1Point, Scalar
 
 T_SAME_PERM_PROOF = TypeVar("T_SAME_PERM_PROOF", bound="SamePermutationProof")
 
 
 class SamePermutationProof:
-    def __init__(self, B: PointProjective, grand_prod_proof: GrandProductProof) -> None:
+    def __init__(self, B: G1Point, grand_prod_proof: GrandProductProof) -> None:
         self.B = B
         self.grand_prod_proof = grand_prod_proof
 
     @classmethod
     def new(
         cls: Type[T_SAME_PERM_PROOF],
-        crs_G_vec: List[PointProjective],
-        crs_H_vec: List[PointProjective],
-        crs_U: PointProjective,
-        A: PointProjective,
-        M: PointProjective,
-        vec_a: List[Fr],
+        crs_G_vec: List[G1Point],
+        crs_H_vec: List[G1Point],
+        crs_U: G1Point,
+        A: G1Point,
+        M: G1Point,
+        vec_a: List[Scalar],
         permutation: List[int],
-        vec_a_blinders: List[Fr],
-        vec_m_blinders: List[Fr],
+        vec_a_blinders: List[Scalar],
+        vec_m_blinders: List[Scalar],
         transcript: CurdleproofsTranscript,
     ) -> T_SAME_PERM_PROOF:
         n_blinders = len(vec_a_blinders)
@@ -53,14 +47,12 @@ class SamePermutationProof:
 
         vec_a_permuted = get_permutation(vec_a, permutation)
         permuted_polynomial_factors = [
-            a + Fr(m) * alpha + beta for (a, m) in zip(vec_a_permuted, permutation)
+            a + Scalar(m) * alpha + beta for (a, m) in zip(vec_a_permuted, permutation)
         ]
-        gprod_result = reduce(op_mul, permuted_polynomial_factors, Fr.one())
+        gprod_result = reduce(op_mul, permuted_polynomial_factors, Scalar(1))
 
         vec_beta_repeated = [beta] * ell
-        B = add(
-            add(A, multiply(M, int(alpha))), compute_MSM(crs_G_vec, vec_beta_repeated)
-        )
+        B = (A + M * alpha) + compute_MSM(crs_G_vec, vec_beta_repeated)
 
         vec_b_blinders = [
             vec_a_blinders[i] + alpha * vec_m_blinders[i] for i in range(0, n_blinders)
@@ -81,14 +73,14 @@ class SamePermutationProof:
 
     def verify(
         self,
-        crs_G_vec: List[PointProjective],
-        crs_H_vec: List[PointProjective],
-        crs_U: PointProjective,
-        crs_G_sum: PointProjective,
-        crs_H_sum: PointProjective,
-        A: PointProjective,
-        M: PointProjective,
-        vec_a: List[Fr],
+        crs_G_vec: List[G1Point],
+        crs_H_vec: List[G1Point],
+        crs_U: G1Point,
+        crs_G_sum: G1Point,
+        crs_H_sum: G1Point,
+        A: G1Point,
+        M: G1Point,
+        vec_a: List[Scalar],
         n_blinders: int,
         transcript: CurdleproofsTranscript,
         msm_accumulator: MSMAccumulator,
@@ -104,12 +96,12 @@ class SamePermutationProof:
 
         # Step 2
         polynomial_factors = [
-            a + Fr(i) * alpha + beta for (a, i) in zip(vec_a, range(0, ell))
+            a + Scalar(i) * alpha + beta for (a, i) in zip(vec_a, range(0, ell))
         ]
-        gprod_result = reduce(op_mul, polynomial_factors, Fr.one())
+        gprod_result = reduce(op_mul, polynomial_factors, Scalar(1))
         vec_beta_repeated = [beta] * ell
         msm_accumulator.accumulate_check(
-            add(add(self.B, neg(A)), neg(multiply(M, int(alpha)))),
+            (self.B - A) - (M * alpha),
             crs_G_vec,
             vec_beta_repeated,
         )
