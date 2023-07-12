@@ -1,5 +1,6 @@
 from functools import reduce
 import json
+from math import log2
 from typing import List, Type, TypeVar
 from curdleproofs.util import (
     get_random_point,
@@ -44,6 +45,14 @@ class CurdleproofsCrs:
 
     @classmethod
     def from_random_points(cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int, points: List[G1Point]) -> T_CurdleproofsCrs:
+        min_points_count = ell + n_blinders + 3
+        if len(points) < min_points_count:
+            raise Exception("not min points required", min_points_count, len(points))
+
+        n = ell + n_blinders
+        if n != 2**int(log2(n)):
+            raise Exception("ell + n_blinders not a power of 2, ell={} n_blinders={}".format(ell, n_blinders))
+
         vec_G = points[0:ell]
         vec_H = points[ell:ell + n_blinders]
         return cls(
