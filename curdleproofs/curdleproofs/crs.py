@@ -5,6 +5,7 @@ from curdleproofs.util import (
     get_random_point,
     point_projective_from_json,
     point_projective_to_json,
+    point_from_seed,
     BufReader,
     g1_to_bytes,
     Z1
@@ -40,6 +41,12 @@ class CurdleproofsCrs:
     ) -> T_CurdleproofsCrs:
         count = ell + n_blinders + 3
         points: List[G1Point] = [get_random_point() for _ in range(0, count)]
+        return cls.from_random_points(ell, n_blinders, points)
+
+    @classmethod
+    def from_seed(cls: Type[T_CurdleproofsCrs], ell: int, n_blinders: int, seed: str) -> T_CurdleproofsCrs:
+        count = ell + n_blinders + 3
+        points = [point_from_seed(seed, i) for i in range(0, count)]
         return cls.from_random_points(ell, n_blinders, points)
 
     @classmethod

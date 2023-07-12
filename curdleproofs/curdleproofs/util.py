@@ -1,4 +1,5 @@
 from random import randint
+import hashlib
 from math import log2
 from typing import List, TypeVar, NewType
 from py_arkworks_bls12381 import G1Point, Scalar
@@ -22,6 +23,14 @@ def random_scalar() -> Scalar:
     # Note: the constructor 'Scalar()' errors with integers of more than 128 bits
     # Scalar.from_le_bytes() requires integers less than  CURVE_ORDER
     return Scalar.from_le_bytes(randint(1, CURVE_ORDER - 1).to_bytes(32, 'little'))
+
+
+def point_from_seed(seed: str, nonce: int) -> G1Point:
+    message = seed + str(nonce)
+    hash_bytes = hashlib.sha256(message.encode()).digest()
+    hash_int = int.from_bytes(hash_bytes, byteorder='little')
+    k = Scalar.from_le_bytes((hash_int % CURVE_ORDER).to_bytes(32, 'little'))
+    return G1 * k
 
 
 def point_projective_to_bytes(point: G1Point) -> bytes:

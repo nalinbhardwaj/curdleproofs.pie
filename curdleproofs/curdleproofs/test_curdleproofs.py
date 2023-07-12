@@ -727,6 +727,13 @@ def test_serde():
     )
 
 
+def test_crs_from_seed():
+    N = 64
+    ell = N - N_BLINDERS
+    crs = CurdleproofsCrs.from_seed(ell, N_BLINDERS, 'some_readable_seed')
+    print(crs.to_json())
+
+
 def test_tracker_opening_proof():
     G = G1
     k = generate_blinders(1)[0]
