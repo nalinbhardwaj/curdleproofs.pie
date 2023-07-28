@@ -76,10 +76,23 @@ def IsValidWhiskShuffleProof(
     pre_shuffle_trackers: Sequence[WhiskTracker],
     post_shuffle_trackers: Sequence[WhiskTracker],
     whisk_shuffle_proof_bytes: WhiskShuffleProofBytes,
-):
+) -> bool:
     """
     Verify `post_shuffle_trackers` is a permutation of `pre_shuffle_trackers`.
     """
+    try:
+        AssertIsValidWhiskShuffleProof(crs, pre_shuffle_trackers, post_shuffle_trackers, whisk_shuffle_proof_bytes)
+        return True
+    except:  # noqa: E722
+        return False
+
+
+def AssertIsValidWhiskShuffleProof(
+    crs: CurdleproofsCrs,
+    pre_shuffle_trackers: Sequence[WhiskTracker],
+    post_shuffle_trackers: Sequence[WhiskTracker],
+    whisk_shuffle_proof_bytes: WhiskShuffleProofBytes,
+):
     vec_R = [point_projective_from_bytes(tracker.r_G) for tracker in pre_shuffle_trackers]
     vec_S = [point_projective_from_bytes(tracker.k_r_G) for tracker in pre_shuffle_trackers]
 
@@ -92,7 +105,7 @@ def IsValidWhiskShuffleProof(
 
     whisk_shuffle_proof = WhiskShuffleProof.from_bytes(BufReader(whisk_shuffle_proof_bytes), n)
 
-    return whisk_shuffle_proof.proof.verify(crs, vec_R, vec_S, vec_T, vec_U, whisk_shuffle_proof.M)
+    whisk_shuffle_proof.proof.verify(crs, vec_R, vec_S, vec_T, vec_U, whisk_shuffle_proof.M)
 
 
 def GenerateWhiskShuffleProof(
@@ -138,10 +151,22 @@ def IsValidWhiskOpeningProof(
     """
     Verify knowledge of `k` such that `tracker.k_r_G == k * tracker.r_G` and `k_commitment == k * BLS_G1`.
     """
+    try:
+        AssertIsValidWhiskOpeningProof(tracker, k_commitment, tracker_proof)
+        return True
+    except:  # noqa: E722
+        return False
+
+
+def AssertIsValidWhiskOpeningProof(
+    tracker: WhiskTracker,
+    k_commitment: BLSPubkey,
+    tracker_proof: SerializedWhiskTrackerProof,
+):
     tracker_proof_instance = TrackerOpeningProof.from_bytes(BufReader(tracker_proof))
 
     transcript_verifier = CurdleproofsTranscript(b"whisk_opening_proof")
-    return tracker_proof_instance.verify(
+    tracker_proof_instance.verify(
         transcript_verifier,
         point_projective_from_bytes(tracker.k_r_G),
         point_projective_from_bytes(tracker.r_G),
