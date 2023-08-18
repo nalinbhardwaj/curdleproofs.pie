@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "curdleproofs"
-version = "0.1.0"
+version = "0.1.1"
 description = "Curdleproofs is a zero-knowledge shuffle argument"
 authors = ["Nalin Bhardwaj <nalinbhardwaj@nibnalin.me>"]
 license = "MIT"
@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 py_arkworks_bls12381 = "0.3.4"
-merlin = {git = "https://github.com/nalinbhardwaj/curdleproofs.pie", rev = "master", subdirectory = "merlin"}
+merlin_transcripts = "0.1.1"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.982"
