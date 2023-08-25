@@ -75,22 +75,6 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
-name = "flake8"
-version = "6.1.0"
-description = "the modular source code checker: pep8 pyflakes and co"
-optional = false
-python-versions = ">=3.8.1"
-files = [
-    {file = "flake8-6.1.0-py2.py3-none-any.whl", hash = "sha256:ffdfce58ea94c6580c77888a86506937f9a1a227dfcd15f245d694ae20a6b6e5"},
-    {file = "flake8-6.1.0.tar.gz", hash = "sha256:d5b3857f07c030bdb5bf41c7f53799571d75c4491748a3adcd47de929e34cd23"},
-]
-
-[package.dependencies]
-mccabe = ">=0.7.0,<0.8.0"
-pycodestyle = ">=2.11.0,<2.12.0"
-pyflakes = ">=3.1.0,<3.2.0"
-
-[[package]]
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
@@ -99,28 +83,6 @@ python-versions = ">=3.7"
 files = [
     {file = "iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374"},
     {file = "iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3"},
-]
-
-[[package]]
-name = "mccabe"
-version = "0.7.0"
-description = "McCabe checker, plugin for flake8"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e"},
-    {file = "mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325"},
-]
-
-[[package]]
-name = "merlin-transcripts"
-version = "0.1.1"
-description = "merlin is a Python implementation of Merlin transcripts (https://merlin.cool)"
-optional = false
-python-versions = ">=3.9,<4.0"
-files = [
-    {file = "merlin_transcripts-0.1.1-py3-none-any.whl", hash = "sha256:121ff93097000336f87bd8052413513ad0cace6c5a6a4831bd326cf9ad154c5d"},
-    {file = "merlin_transcripts-0.1.1.tar.gz", hash = "sha256:ddc4da3cc3c209d6ab62fa8b5e8c3bc60ad86e8b2e9c5f9f687f4320ca33f145"},
 ]
 
 [[package]]
@@ -230,93 +192,6 @@ dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
-name = "py-arkworks-bls12381"
-version = "0.3.4"
-description = ""
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-macosx_10_7_x86_64.whl", hash = "sha256:7b77d0e84204a27c0cd2755084cdba147aabdd914e31f3e1d9bf39de8e04d1eb"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4b861f26e3a32e623d115cc12ce9da637c4ad85717fef02bfe949de32fc31aab"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:fddec2702093c4505fa2bb6fb754efe54692502e556bc03d2be6a369dfe20bea"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1f5b4bc1e0326be10ea1c522c8eecd638723116c9838703bf245fc1b55b5777f"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:f82cd27fa579f3911154b731bc6860f38fa49e3d4fe509e971fbb56b2c17b2eb"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:4ba5245469fea19deeab059c4fb49d7332ee16659b1a0c85692c786e032d3957"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:9d82ef2604fed956953c1947210248ed452f2be03d4490e27e7c9438b31495a8"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7414ac0fd29abe39ad2b8b78fb80bc52ca4527cbca24f28db9064c073b003062"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-none-win32.whl", hash = "sha256:2a424c1f07f23c385b242699370cc3cabec62c0c4d6909487b932789319d9433"},
-    {file = "py_arkworks_bls12381-0.3.4-cp310-none-win_amd64.whl", hash = "sha256:e318e5df82bad081c37babd929126a5c8f83e04009afcb4bf8e8a20c1d8f1abd"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-macosx_10_7_x86_64.whl", hash = "sha256:ce3d8bc5b495881d783ac46025c47fcb6e4d38deb3e5f32bb572f2a370099183"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e1d837cd246efe8ded815e8a8de461c87772dc1a0359eb4fce8b815d473e94b4"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:55a21207599bba40524a4791ca6538513cd212c7cb7466f13f95b3f401c6ff94"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:19e036b37fa07d824f2b4d289bae5ee4b820b3702fd6cb01716587a5f43ab3be"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:0d6ba0d216fd7d6a62f8743c8f079f69db473ab6058112d78e60bb46aa857ffe"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:66c03ef4a8841d111c76e86d9c86ce73474c1d08d025c569567352cd5745aef2"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a81bce857ea7db3fd7a5e76a607cd794b36a78aea6cb18c710f9b162bac46b83"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a03209f97d6732c828a2383ab022c763d94530fad6b61468e1c5e149c5fa5710"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-none-win32.whl", hash = "sha256:f4c80957d3dd4bc3a045e78b139e06f7eb82004297b7c56faa505d16fb7ce650"},
-    {file = "py_arkworks_bls12381-0.3.4-cp311-none-win_amd64.whl", hash = "sha256:6267bb2d5ae9ce0953fe50d8316538e1e3f2af642a19621ee23f53dfda52e900"},
-    {file = "py_arkworks_bls12381-0.3.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:72cb392eeecffd28e43585c104da005999be485e5a763ebff271679560e0d36a"},
-    {file = "py_arkworks_bls12381-0.3.4-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:7d87f93ccdc6ac07c3c9cfdc0700980b39ca633216769ea1f7659f320a8e5514"},
-    {file = "py_arkworks_bls12381-0.3.4-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:2842dae251f9d52b2f51bdfc7c01165905ebd55bafda9dcebde501fad913fa8b"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-macosx_10_7_x86_64.whl", hash = "sha256:6473ee984de5396b1743f578c6f50413659307e4ab2023fa82c1207c3f963dc6"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:f6ca5c31af472e7a3481adc91ae8b2cf0277852a1c5471f16cfcede47ef949b5"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:4e6d3042edbdd4f7e5633a2dd1cb39be6394b18f2e37b7a88c0257fa3479c0e0"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:980141f625bc2a6f369a20007bcef80051f2cf910d154f2cf71f7a423c47b75b"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:25206c9ba7327f42129b189a1f61053c0929feb0e19385502cab655b7f1f2f58"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:b8cab59fae127c640d3a56c13084874f15e73cc585b2ab666349ec1d82595c88"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:95097f14cd884199737adb0a3754b5c78a4a041f8b38a152228b013f4099668f"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:71d95e2d30216f7c7ca967582be8cac4b5b5b6fcafb6ebf8d3532238e5bb2936"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-none-win32.whl", hash = "sha256:5ff17fe50663cfe73c13cbad9b7f57d1209ab7745ed8db22ad4ed2d198a29562"},
-    {file = "py_arkworks_bls12381-0.3.4-cp38-none-win_amd64.whl", hash = "sha256:0799b1bfb71f028f74d20bd9cb96c03d4ab0b6b8f6b94ad55910770ff49c77f8"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-macosx_10_7_x86_64.whl", hash = "sha256:df984e07fbe15cae04f586716b4f47fb2115ddb40a27146547ab73a323624047"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:6d65d7eee1ac61a116646d283df83619c068ef21db8490ed52f8343021936617"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:6d1fc9ff5161cc9e9ef5ceae9aef3a0794c4d419b0c9b840d3ea5247b3a5ddcb"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ad3b0199638d830d15b67412b72848cef25a2cfa5dbae260af09cb179908c975"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:0bce6771d1612e6ef1aacd93a693ff1273140f7fa4af98a2da73e83265734a58"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:6fec9947e698fa6c64cb178813f6e23208c9e3e02e863fa4da8ae5d9c2849a3f"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:8f6cd5856eb056fb9ca3c374ecb953d5de4fb8bc81787ab4fa927ed60a717a1d"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d9b9f6b560d917396def5c6bf4bc99e014f516d0446189fc3bf1e8d0b2b8099c"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-none-win32.whl", hash = "sha256:62f97432a4458619d944bcc53ad178bc9606b983f539096a1fed09f1afbc3386"},
-    {file = "py_arkworks_bls12381-0.3.4-cp39-none-win_amd64.whl", hash = "sha256:7c1e2475b2fc52ede8ce8dc2f4b9e6325876ef22a788aacad64affd95553e794"},
-    {file = "py_arkworks_bls12381-0.3.4-pp38-pypy38_pp73-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:6a88dbfb6c43e2e37477df6673403580e78ac0011079528e1ea7d1950d75b153"},
-    {file = "py_arkworks_bls12381-0.3.4-pp38-pypy38_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c6af83fbce8159d5637e21d0343baf47f811f15b6a4c5531563dd976518a12d0"},
-    {file = "py_arkworks_bls12381-0.3.4-pp38-pypy38_pp73-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:640decc883597d24f43c0433dec6b51c58870e3ad33e3fd95e9ab8d51bd582ed"},
-    {file = "py_arkworks_bls12381-0.3.4-pp38-pypy38_pp73-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3ac501ecc86c0a269e7c5623a0de1b4193ced8ff3025e288feb86e8811c48205"},
-    {file = "py_arkworks_bls12381-0.3.4-pp38-pypy38_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:bbf7b6fab400345f00fe97fd8b7dbeea1d8eb4340ddfb102dc859978c4e92891"},
-    {file = "py_arkworks_bls12381-0.3.4-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f5c1f9fb2bd77e9b67b4d07dd973d9cc5ee24deae98c17e4c1ea004ffb6019b3"},
-    {file = "py_arkworks_bls12381-0.3.4-pp39-pypy39_pp73-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:7c2340216594f42716c370aad752e61f8cecca5398c03729e731a2e531c199bc"},
-    {file = "py_arkworks_bls12381-0.3.4-pp39-pypy39_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3dd8d0781e89316aa42119b2ba4b8a02b8fe020cf4334b017fca6c39e1fd7f59"},
-    {file = "py_arkworks_bls12381-0.3.4-pp39-pypy39_pp73-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:90e457ffdf86cecb1f32327a24580ed8a308ea29497ceb05dd037f89469adff8"},
-    {file = "py_arkworks_bls12381-0.3.4-pp39-pypy39_pp73-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:a4f90898a53d3ee4adebd9da77f4a0a55b8fa95fac71cfb0c9c0e71fd9b8d58b"},
-    {file = "py_arkworks_bls12381-0.3.4-pp39-pypy39_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:5720f9b3201530c91f0074f5655651f410d79031e14f576790bbd303498aaddc"},
-    {file = "py_arkworks_bls12381-0.3.4-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3b91c49d067051502449867dc7828166b6eb44b8afef12f375875a291f6fbd0a"},
-    {file = "py_arkworks_bls12381-0.3.4.tar.gz", hash = "sha256:93a86d24b0b07722c9449cef523e977c2018ec7673accfac25334694f40f3848"},
-]
-
-[[package]]
-name = "pycodestyle"
-version = "2.11.0"
-description = "Python style guide checker"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "pycodestyle-2.11.0-py2.py3-none-any.whl", hash = "sha256:5d1013ba8dc7895b548be5afb05740ca82454fd899971563d2ef625d090326f8"},
-    {file = "pycodestyle-2.11.0.tar.gz", hash = "sha256:259bcc17857d8a8b3b4a2327324b79e5f020a13c16074670f9c8c8f872ea76d0"},
-]
-
-[[package]]
-name = "pyflakes"
-version = "3.1.0"
-description = "passive checker of Python programs"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "pyflakes-3.1.0-py2.py3-none-any.whl", hash = "sha256:4132f6d49cb4dae6819e5379898f2b8cce3c5f23994194c24b77d5da2e36f774"},
-    {file = "pyflakes-3.1.0.tar.gz", hash = "sha256:a0aae034c444db0071aa077972ba4768d40c830d9539fd45bf4cd3f8f6992efc"},
-]
-
-[[package]]
 name = "pytest"
 version = "7.4.0"
 description = "pytest: simple powerful testing with Python"
@@ -363,4 +238,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "acbe48b3164464641f2b84cefe55186cda3eddc2904f75cf7efc24e743b33a99"
+content-hash = "b7dd0b5ae69788b4002e6f1a7b79476fa7214632886a12d865706b7d28c64fe0"

@@ -1,5 +1,5 @@
 from typing import List
-from merlin import MerlinTranscript
+from merlin_transcripts import MerlinTranscript
 from py_arkworks_bls12381 import Scalar
 from curdleproofs.util import CURVE_ORDER
 

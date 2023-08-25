@@ -39,18 +39,18 @@ jobs:
         run: |
           poetry run pytest
       - name: Merlin - Install dependencies
-        working-directory: merlin
+        working-directory: merlin_transcripts
         run: |
           poetry install
       - name: Merlin - Lint with black
-        working-directory: merlin
+        working-directory: merlin_transcripts
         run: |
           poetry run black --diff .
       - name: Merlin - Lint with mypy
-        working-directory: merlin
+        working-directory: merlin_transcripts
         run: |
           poetry run mypy .
       - name: Merlin - Test with pytest
-        working-directory: merlin
+        working-directory: merlin_transcripts
         run: |
           poetry run pytest

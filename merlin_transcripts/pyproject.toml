@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "merlin"
-version = "0.1.0"
+name = "merlin_transcripts"
+version = "0.1.1"
 description = "merlin is a Python implementation of Merlin transcripts (https://merlin.cool)"
 authors = ["Nalin Bhardwaj <nalinbhardwaj@nibnalin.me>"]
 license = "MIT"
