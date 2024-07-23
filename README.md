@@ -1,6 +1,6 @@
 # curdleproofs.pie
 
-curdleproofs.pie is a Python implementation of the [curdleproofs protocol](https://github.com/asn-d6/curdleproofs) from the Ethereum Foundation Cryptography Research team.
+curdleproofs.pie is a Python implementation of the [curdleproofs protocol](https://github.com/asn-d6/curdleproofs), used by the [Whisk consensus spec](https://github.com/ethereum/consensus-specs/tree/dev/specs/_features/whisk).
 
 The implementation is at feature parity with the original implementation and passes all the tests provided there.
 
