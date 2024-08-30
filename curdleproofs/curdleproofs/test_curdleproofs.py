@@ -98,6 +98,7 @@ def test_py_arkworks_bls12381_api():
         '__hash__',
         '__init__',
         '__init_subclass__',
+        '__int__',
         '__le__',
         '__lt__',
         '__module__',
@@ -111,14 +112,17 @@ def test_py_arkworks_bls12381_api():
         '__repr__',
         '__rmul__',
         '__rsub__',
+        '__rtruediv__',
         '__setattr__',
         '__sizeof__',
         '__str__',
         '__sub__',
         '__subclasshook__',
+        '__truediv__',
         'from_le_bytes',
         'inverse',
         'is_zero',
+        'pow',
         'square',
         'to_le_bytes'
     ]
@@ -193,12 +197,14 @@ def test_py_arkworks_bls12381_scalar():
 
     assert CURVE_ORDER == 52435875175126190479447740508185965837690552500527637822603658699938581184513
 
-    # Why does Scalar does not support values over 2**128?
-    Scalar(2**128 - 1)
-    with pytest.raises(OverflowError):
-        Scalar(2**256 - 1)
-    with pytest.raises(OverflowError):
-        Scalar(CURVE_ORDER - 1)
+    # Scalar should handle Fr::MAX
+    assert int(Scalar(CURVE_ORDER - 1)) == CURVE_ORDER - 1
+    # Scalar should overflow if given a value >= CURVE_ORDER
+    assert int(Scalar(CURVE_ORDER)) == 0
+    # Sanity check that the overflowed value is correct
+    assert int(Scalar(2**256)) == 2**256 % CURVE_ORDER
+    # It even accepts integers with more than 256 bits
+    assert int(Scalar(2**257)) == 2**257 % CURVE_ORDER
 
     # Deserialize from big integers
     Scalar.from_le_bytes((CURVE_ORDER - 1).to_bytes(32, 'little'))
