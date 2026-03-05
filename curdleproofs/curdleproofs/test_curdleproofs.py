@@ -121,6 +121,7 @@ def test_py_arkworks_bls12381_api():
         '__truediv__',
         'from_le_bytes',
         'inverse',
+        'is_one',
         'is_zero',
         'pow',
         'square',
